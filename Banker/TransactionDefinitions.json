@@ -1,0 +1,24 @@
+{
+  "TransactionDefinitions": [
+    {
+      "Key": "uber eats",
+      "TransactionCategory": {
+        "CategoryType": "food",
+        "SecondaryType": "ordering",
+        "Color": "green",
+        "ReductionTarget": true
+      },
+      "ReductionTarget": false
+    },
+    {
+      "Key": "unrecgonized",
+      "TransactionCategory": {
+        "CategoryType": "unknown",
+        "SecondaryType": "unknown",
+        "Color": "black",
+        "ReductionTarget": false
+      },
+      "ReductionTarget": false
+    }
+  ]
+}
