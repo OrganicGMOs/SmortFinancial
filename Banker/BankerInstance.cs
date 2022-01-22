@@ -32,20 +32,20 @@ namespace Banker
                 
         }
         public IEnumerable<Transaction> LoadTransactionFiles(string[] files) { throw new NotImplementedException(); }
-        public IEnumerable<Transaction> Search_DateRange(TransActQuery query)
+        public IEnumerable<Transaction> Search_DateRange(TransactionQuery query)
         {
             //return TransactionManager.TransactionQuery(query);
             return null;
         }
         public IEnumerable<Transaction> GetOutgoing(DateTime? start, DateTime? stop) 
         {
-            return TransactionManager.GetTransactions(new TransActQuery()
+            return TransactionManager.GetTransactions(new TransactionQuery()
             {
                 Start = start,
                 Stop = stop,
                 Query = new Func<Transaction, bool>((p) =>
                 {
-                    return p.Debit;
+                    return p.IsDebit;
                 })
             });
         }
@@ -59,13 +59,13 @@ namespace Banker
             return DefinitionsManager.GetCategories();
         }
         //todo: clean query system 
-        public IEnumerable<Transactiondefinition>GetTransactionsDefs()
+        public IEnumerable<TransactionDefinition>GetTransactionsDefs()
         {
             return DefinitionsManager.GetTransactionDefinitions();
         }
         public IEnumerable<Transaction> GetTransactions()
         {
-            return TransactionManager.GetTransactions(new TransActQuery
+            return TransactionManager.GetTransactions(new TransactionQuery
             {
                 Start = null,
                 Stop = null,

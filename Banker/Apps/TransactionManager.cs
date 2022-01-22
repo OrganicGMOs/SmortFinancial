@@ -28,7 +28,7 @@ namespace Banker.Apps
                 //auto archives 
             _today = DateTime.Now;
         }
-        private Transaction ParseTransaction(string[] values) 
+        private Transaction ParseImportTransaction(string[] values) 
         {
             try
             {
@@ -49,9 +49,9 @@ namespace Banker.Apps
                 return new Transaction
                 {
                     Date = DateTime.Parse(values[0]),
-                    Number = values[1],
+                    AssignedId = Guid.NewGuid(), //we are loading a new transaction here, give it an ID
                     Description = values[2],
-                    Debit = outgoing,
+                    IsDebit = outgoing,
                     TransactionType = BankerInstance.DefinitionsManager
                     .GetDefinition(values[2]),
                     Value = value
@@ -76,11 +76,11 @@ namespace Banker.Apps
             lineValues.RemoveAt(0);
             reader.Dispose();
             foreach (var set in lineValues)
-                transactions.Add(ParseTransaction(set));
+                transactions.Add(ParseImportTransaction(set));
             LoadedTransactions.AddRange(transactions);
             return transactions;
         }
-        public IEnumerable<Transaction>GetTransactions(TransActQuery query)
+        public IEnumerable<Transaction>GetTransactions(TransactionQuery query)
         {
             var items = GetTransactions_TimeSpan(query.Start, query.Stop);
             var result = new List<Transaction>();
@@ -108,26 +108,11 @@ namespace Banker.Apps
             }
         }
 
-        #region Initialization
-        public static async Task<TransactionManager> TransactionManagerFactory(string root)
-        {
-            var manager = new TransactionManager(root);
-            await manager.initialize();
-            return manager;
-        }
-        private async Task initialize()
-        {
-            if(!Directory.Exists(_transactionDir))
-                Directory.CreateDirectory(_transactionDir);
-            if(!Directory.Exists(_archive))
-                Directory.CreateDirectory(_archive);
-            LoadedTransactions = new List<Transaction>();
-            await LoadStaticFiles();
-        }
+        #region FileMangement
         private async Task LoadStaticFiles()
         {
             var contents = new List<Task<string>>();
-            var transactions = new List<Transactiondefinition[]>();
+            var transactions = new List<TransactionDefinition[]>();
             foreach (var file in names)
             {
                 if(File.Exists(_transactionDir + "\\" +file))
@@ -146,15 +131,30 @@ namespace Banker.Apps
             }
 
         }
+
+        private async Task UpdateFile()
+        {
+            throw new NotImplementedException();
+            //files 0 - 12 = current year of data, anything older than year is 
+        }
         #endregion
-    }
-    public class Transaction
-    {
-        public DateTime Date { get; set; }
-        public string Number { get; set; } //blank in test data
-        public Transactiondefinition TransactionType { get; set; }
-        public string Description { get; set; }
-        public bool Debit { get; set; }
-        public float Value { get; set; }
+
+        #region Initialization
+        public static async Task<TransactionManager> TransactionManagerFactory(string root)
+        {
+            var manager = new TransactionManager(root);
+            await manager.initialize();
+            return manager;
+        }
+        private async Task initialize()
+        {
+            if(!Directory.Exists(_transactionDir))
+                Directory.CreateDirectory(_transactionDir);
+            if(!Directory.Exists(_archive))
+                Directory.CreateDirectory(_archive);
+            LoadedTransactions = new List<Transaction>();
+            await LoadStaticFiles();
+        }
+        #endregion
     }
 }

@@ -10,16 +10,16 @@ namespace Banker.Apps
 {
     internal class DefinitionsManager
     {
-        public List<Transactiondefinition> TransactionDefinitions;
+        public List<TransactionDefinition> TransactionDefinitions;
         public List<TransactionCategory> Categories;
-        public event EventHandler<Transactiondefinition> TransactionDefinitionsChanged;
+        public event EventHandler<TransactionDefinition> TransactionDefinitionsChanged;
         public event EventHandler<TransactionCategory> TransactionCategoriesCleared;
         private string _Root;
         private string _Definitions;
         private string _Category;
 
         #region CRUD
-        internal bool CreateDefinition(Transactiondefinition def) 
+        internal bool CreateDefinition(TransactionDefinition def) 
         {
             //make sure def doesnt exist
             var exist = TransactionDefinitions.Where(p => p.Key == def.Key)
@@ -40,7 +40,7 @@ namespace Banker.Apps
                 return false;
             return true;
         }
-        internal bool UpdateDefinition(Transactiondefinition trans) 
+        internal bool UpdateDefinition(TransactionDefinition trans) 
         {
             var item = TransactionDefinitions.Where(p => p.Key == trans.Key)
                 .FirstOrDefault();
@@ -49,7 +49,7 @@ namespace Banker.Apps
             else
             {
                 item.ReductionTarget = trans.ReductionTarget;
-                item.TransactionCategory = trans.TransactionCategory;
+                item.MappedCategory = trans.MappedCategory;
                 return true;
             }            
         }
@@ -61,15 +61,15 @@ namespace Banker.Apps
                 return false;
             else
             {
-                item.SubTypes = cat.SubTypes;
+                item.Subtype = cat.Subtype;
                 item.ReductionTarget = cat.ReductionTarget;
                 item.CategoryType = cat.CategoryType;
-                item.AssignedColor = cat.AssignedColor;
+                item.Color = cat.Color;
                 item.ReductionTarget = cat.ReductionTarget;
                 return true;
             }
         }
-        internal bool DeleteDefinition(Transactiondefinition def) 
+        internal bool DeleteDefinition(TransactionDefinition def) 
         {
             var item = TransactionDefinitions.Where(p => p.Key == def.Key)
                 .FirstOrDefault();
@@ -89,12 +89,12 @@ namespace Banker.Apps
                 Categories.Remove(item);
             return true;
         }
-        internal Transactiondefinition GetDefinition(string key)
+        internal TransactionDefinition GetDefinition(string key)
         {
             var item = TransactionDefinitions.Where(p => p.Key == key)
                 .FirstOrDefault();
             if (item == null)
-                return new Transactiondefinition();
+                return new TransactionDefinition();
             return item;
         }
         internal TransactionCategory? GetCategory(string key)
@@ -103,7 +103,7 @@ namespace Banker.Apps
                 .FirstOrDefault();
             return item;
         }
-        internal IEnumerable<Transactiondefinition> GetTransactionDefinitions() 
+        internal IEnumerable<TransactionDefinition> GetTransactionDefinitions() 
         {
             return TransactionDefinitions.ToList();
         }
@@ -147,7 +147,7 @@ namespace Banker.Apps
         {
             var instance = new DefinitionsManager();
             instance.Categories = new List<TransactionCategory>();
-            instance.TransactionDefinitions = new List<Transactiondefinition>();
+            instance.TransactionDefinitions = new List<TransactionDefinition>();
             instance._Root = root;
             await instance.Initialize();
             return instance;
@@ -166,7 +166,7 @@ namespace Banker.Apps
                 var cat = LoadCategories();
                 await Task.WhenAll(def, cat);
                 if (TransactionDefinitions.Count >= 0)
-                    TransactionDefinitions.Add(new Transactiondefinition()); // add default
+                    TransactionDefinitions.Add(new TransactionDefinition()); // add default
                 if(Categories.Count >= 0)
                     Categories.Add(new TransactionCategory());              // add default
 
@@ -216,33 +216,11 @@ namespace Banker.Apps
         }
         private async Task<ICollection<TransactionCategory>> GetDefaultCategories()
         {
-            //todo: grab a default file from github?
-            await Task.Delay(1000);//just wait a sec then return empty
-            return new List<TransactionCategory>()
-            {
-                new TransactionCategory()
-                {
-                    CategoryType = "Unknown",
-                    SubTypes = new string[] { "" },
-                    AssignedColor = "black",
-                    ReductionTarget = false
-                }
-            };
+            throw new NotImplementedException();
         }
-        private async Task<ICollection<Transactiondefinition>> GetDefaultDefinitions()
+        private async Task<ICollection<TransactionDefinition>> GetDefaultDefinitions()
         {
-            //todo: get default file from github
-            await Task.Delay(1000);
-            return new List<Transactiondefinition>()
-            {
-                new Transactiondefinition()
-                {
-                    Key = "unknown",
-                    ReductionTarget = false,
-                    TransactionCategory = new Transactioncategory()
-
-                }
-            };
+            throw new NotImplementedException();
         }
         #endregion
     }
