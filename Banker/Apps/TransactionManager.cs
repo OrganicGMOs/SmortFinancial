@@ -10,23 +10,25 @@ namespace Banker.Apps
 {
     internal class TransactionManager
     {
-        private List<Transaction> LoadedTransactions;
+        private TransactionHistory LoadedTransactions;
+        private IEnumerable<Transaction> _lastSaved;
         private string _root;
         private string _transactionDir;
         private string _archive;
+        private string _history;
         private DateTime OldestTransaction;
         private DateTime _today;
-        private string[] names = {"0.json", "1.json","2.json","3.json","4.json",
-            "5.json","6.json","7.json","8.json","9.json","10.json","11.json","12.json"};
 
         internal TransactionManager(string root)
         {
             _root = root;
             _transactionDir = root + "\\transactions";
             _archive = _transactionDir + "\\archive";
+            _history = _transactionDir + "\\history.json";
                 //keeps last 12 months of data
                 //auto archives 
             _today = DateTime.Now;
+            _lastSaved = new List<Transaction>();
         }
         private Transaction ParseImportTransaction(string[] values) 
         {
@@ -76,8 +78,15 @@ namespace Banker.Apps
             lineValues.RemoveAt(0);
             reader.Dispose();
             foreach (var set in lineValues)
-                transactions.Add(ParseImportTransaction(set));
-            LoadedTransactions.AddRange(transactions);
+            {
+                var transaction = ParseImportTransaction(set);
+                if(!CheckForDuplicate(transaction,LoadedTransactions.Transactions))
+                    transactions.Add(ParseImportTransaction(set));
+                
+
+            }
+                
+            LoadedTransactions.Transactions.AddRange(transactions);
             return transactions;
         }
         public IEnumerable<Transaction>GetTransactions(TransactionQuery query)
@@ -89,56 +98,171 @@ namespace Banker.Apps
                     result.Add(item);
             return result;
         }
+        internal int GetActiveCount()
+        {
+            return LoadedTransactions.Transactions.Count();
+        }
+        public IEnumerable<Transaction> GetLastSaved()
+        {
+            return _lastSaved;
+        }
         private IEnumerable<Transaction>GetTransactions_TimeSpan(DateTime? start, DateTime? end)
         {
             if (start == null && end == null)
             {
-                return LoadedTransactions.OrderBy(p => p.Date).ToList();
+                return LoadedTransactions.Transactions.OrderBy(p => p.Date).ToList();
             }
             else if (start == null || end == null)
             {
                 var date = start == null ? end : start;
-                return LoadedTransactions.Where(p => p.Date < date);
+                return LoadedTransactions.Transactions.Where(p => p.Date < date);
             }
             else
             {
-                return LoadedTransactions
+                return LoadedTransactions.Transactions
                     .Where(p => p.Date <= start && p.Date >= end)
                     .ToList();
             }
         }
+        internal async Task SaveTransactions(IEnumerable<Transaction> transactions)
+        {
+            var valid = transactions.Where(p => p != null);
+            //not called automatically by ParseTransactions_CSV(), "up to user to save"
+            if (valid.Count() <= 0)
+            {
+                //todo: exception and logging
+                return;
+            }
+            else
+            {
+                await UpdateSavedTransactions(valid);
+                _lastSaved = valid;
+            }
+        }
+
+        internal IEnumerable<Transaction> TransactionQuery(TransactionQuery query)
+        {
+            //just going to force uber eats because im curious
+            var uber = LoadedTransactions
+                .Transactions.Where(p => p.Description
+                    .Contains("uber eats", StringComparison.OrdinalIgnoreCase));
+            return uber;
+        }
 
         #region FileMangement
-        private async Task LoadStaticFiles()
+        private async Task LoadTransactionHistory()
         {
-            var contents = new List<Task<string>>();
-            var transactions = new List<TransactionDefinition[]>();
-            foreach (var file in names)
-            {
-                if(File.Exists(_transactionDir + "\\" +file))
-                    contents.Add(
-                        File.ReadAllTextAsync(_transactionDir + "\\" + file));
-                else
-                    File.Create(_transactionDir + "\\" + file);
-            }
-            var fileContents = await Task.WhenAll(contents);
-            foreach(var file in fileContents)
-            {
-                var content = JsonConvert
-                    .DeserializeObject<TransactionDefinitions>(file);
-                if (content != null)
-                    LoadedTransactions.Add(new Transaction());
-            }
-
+            LoadedTransactions = await GetOrCreateHistory(_history);
         }
-
-        private async Task UpdateFile()
+        private async Task UpdateSavedTransactions(IEnumerable<Transaction> transactions)
         {
-            throw new NotImplementedException();
-            //files 0 - 12 = current year of data, anything older than year is 
+            //determine which file the transactions fall under
+            var fileNames = FindFileLocations(transactions);
+            var updateTasks = new List<Task>();
+            foreach(var file in fileNames)
+                updateTasks.Add(UpdateFile(file.Key, file.Value));
+            await Task.WhenAll(updateTasks);
+        }
+        private Dictionary<string,List<Transaction>> FindFileLocations(IEnumerable<Transaction> transactions)
+        {
+            var dict = new Dictionary<string, List<Transaction>>();
+            foreach (var transaction in transactions.OrderBy(p => p.Date))
+            {
+                var age = _today.Subtract(transaction.Date).TotalDays;
+                //if age is over a year its an archive item
+                if (age > 365)
+                    UpdateOrCreateDictionaryValue(dict, _archive + "\\"+ transaction.Date.Year.ToString()+".json", transaction);
+                else
+                    UpdateOrCreateDictionaryValue(dict,_history,transaction);
+            }
+            return dict;
+        }
+        private void UpdateOrCreateDictionaryValue(Dictionary<string,List<Transaction>> dict,string key,Transaction transaction)
+        {
+            if(dict.ContainsKey(key))
+                dict[key].Add(transaction);
+            else
+            {
+                var list = new List<Transaction>();
+                dict.Add(key, list);
+                list.Add(transaction);
+            }
+        }
+        private async Task UpdateFile(string file,IEnumerable<Transaction> transactions)
+        {
+            int duplicatCount = 0;
+            //todo: file size / compression
+            var history = await GetOrCreateHistory(file);
+            if (history.Transactions.Count > 0)
+            {
+
+                foreach (var t in transactions)
+                {
+                    if(CheckForDuplicate(t,history.Transactions))
+                    {
+                        //todo: logging and exceptions. enable forced "duplicates"?
+                        Console.WriteLine("Duplicate item, count: " + ++duplicatCount);
+                    }
+                    else
+                        history.Transactions.Add(t);
+                }
+            }
+            else
+                history.Transactions = transactions.ToList();
+            //sort
+            history.Transactions.Sort((a, b) =>
+            {
+                return a.Date.CompareTo(b.Date);
+            });
+            var json = JsonConvert.SerializeObject(history, Formatting.Indented);
+            await Extensions.WriteFile(history.FilePath,json);
+        }
+        private async Task<TransactionHistory> GetOrCreateHistory(string path)
+        {
+            if (File.Exists(path))
+            {
+                var json = await Extensions.ReadFile(path);
+                if (json != String.Empty)
+                {
+                    var history = JsonConvert.DeserializeObject<TransactionHistory>(json);
+                    if (history != null)
+                        return history;
+                    else
+                        return StartHistory(path);
+                }
+                else 
+                    return StartHistory(path);
+            }
+            else
+                return StartHistory(path);
+        }
+        private TransactionHistory StartHistory(string path)
+        {
+            return new TransactionHistory()
+            {
+                FilePath = path,
+                Modified = DateTime.Now,
+                Transactions = new List<Transaction>()
+            };
         }
         #endregion
-
+        private bool CheckForDuplicate(Transaction transaction, IEnumerable<Transaction> transactions)
+        {
+            var match = transactions.Where(p =>
+            {
+                if (p.Date == transaction.Date
+                    && p.IsDebit == transaction.IsDebit
+                    && p.Value == transaction.Value
+                    && p.Description == transaction.Description)
+                    return true;
+                else
+                    return false;
+            });
+            if (match.Count() > 0)
+                return true;
+            else
+                return false;
+        }
         #region Initialization
         public static async Task<TransactionManager> TransactionManagerFactory(string root)
         {
@@ -152,8 +276,7 @@ namespace Banker.Apps
                 Directory.CreateDirectory(_transactionDir);
             if(!Directory.Exists(_archive))
                 Directory.CreateDirectory(_archive);
-            LoadedTransactions = new List<Transaction>();
-            await LoadStaticFiles();
+            await LoadTransactionHistory();
         }
         #endregion
     }

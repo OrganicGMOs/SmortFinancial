@@ -8,10 +8,28 @@ using System.Linq;
 Console.WriteLine("Hello, lets read your transactions");
 
 var file = Environment.GetFolderPath(Environment.SpecialFolder.Desktop) + "\\transactions.CSV";
-var banker = await BankerInstance.BankerFactory();
 Console.WriteLine("loading");
+var banker = await BankerInstance.BankerFactory();
+var loadedTransactions = banker.GetLoadedTransactionCount();
+Console.WriteLine("Loaded: " + loadedTransactions);
 //JsonCreation();
-ParseFile(file);
+var transactions = await ParseFile(file);
+Console.WriteLine("\n\n Ready to save to disk?");
+Console.ReadKey();
+Console.Clear();
+await SaveTransactions(transactions);
+Console.WriteLine("Loaded: " + banker.GetLoadedTransactionCount());
+Console.ReadKey();
+Console.Clear();
+var uber = banker.Search_DateRange(new TransactionQuery());
+float price = 0;
+foreach (var u in uber)
+    if (u.IsDebit)
+        price += u.Value;
+Console.WriteLine(String.Format("Found {0} uber eats entries for a total of ${1} spent in the past year",
+    uber.Count(),
+    price));
+Console.ReadKey();
 
 
 
@@ -26,7 +44,7 @@ void JsonCreation()
     var TCFile = new TransactionCategories();
     var TF = new Banker.Models.TransactionDefinitions();
     var TC = new CategoryDefinitions();
-    TransactionFile.Transactions = new Transaction[]
+    TransactionFile.Transactions = new List<Transaction>()
     {
         new Transaction
         {
@@ -80,7 +98,7 @@ void JsonCreation()
     var tfj2 = JsonConvert.SerializeObject(TF,Formatting.Indented);
     WriteToScreen(tfj2);
 
-    TC.Definitions = new CategoryDefinition[]
+    TC.Definitions = new List<CategoryDefinition>()
     {
         new CategoryDefinition
         {
@@ -103,21 +121,28 @@ void WriteToScreen(string value)
     Console.ReadKey();
 }
 
-async Task ParseFile(string location){
-    Console.WriteLine("Grabbing Categories");
-    foreach (var r in banker.GetCategories())
-        Console.WriteLine(r.CategoryType);
-    foreach (var c in banker.GetTransactionsDefs())
-        Console.WriteLine(c.Key);
-    var transactions = banker.GetTransactions();
+async Task<IEnumerable<Transaction>> ParseFile(string location){
+
 
     Console.WriteLine("Parsing file");
-    Console.WriteLine(transactions.Count() + " Transactions");
     var response = await banker.LoadNewTransactionFile(file);
     transactions = banker.GetTransactions();
     foreach (var transaction in response)
         Console.WriteLine(transaction.Description);
     Console.WriteLine(transactions.Count() + " Transactions");
+    return response;
+}
+
+async Task SaveTransactions(IEnumerable<Transaction> transactions)
+{
+    await banker.SaveTransactions(transactions);
+    Console.WriteLine("Items saved");
+    Console.WriteLine("\n\n Ready to read back saved file?");
+    Console.ReadKey();
+    Console.Clear();
+    var saved = banker.GetLastSavedTransactions();
+    foreach(var transaction in saved)
+        Console.WriteLine(transaction.Description);
 }
 
 Console.ReadKey();

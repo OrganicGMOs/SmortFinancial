@@ -18,13 +18,14 @@ namespace Banker.Models
     }
     public class TransactionHistory
     {
+        public string FilePath { get; set; }
         public DateTime Modified { get; set; }
         public DateTime OldestRecord { get; set; }
-        public Transaction[] Transactions { get; set; }
+        public List<Transaction> Transactions { get; set; }
     }
     public class CategoryDefinitions
     {
-        public CategoryDefinition[] Definitions { get; set; }
+        public List<CategoryDefinition> Definitions { get; set; }
     }
 }
 

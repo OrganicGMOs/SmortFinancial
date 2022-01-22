@@ -31,11 +31,27 @@ namespace Banker
                 throw new Exception("File doesnt exist");
                 
         }
+        public async Task SaveTransactions(IEnumerable<Transaction> transactions)
+        {
+            try
+            {
+                //todo: api return types
+                await TransactionManager.SaveTransactions(transactions);
+            }
+            catch(Exception ex)
+            {
+                Console.Error.WriteLine(ex.Message);
+            }
+        }
+        public IEnumerable<Transaction> GetLastSavedTransactions()
+        {
+            return TransactionManager.GetLastSaved();
+        }
         public IEnumerable<Transaction> LoadTransactionFiles(string[] files) { throw new NotImplementedException(); }
+        //todo: replace hard code look for uber eats lol
         public IEnumerable<Transaction> Search_DateRange(TransactionQuery query)
         {
-            //return TransactionManager.TransactionQuery(query);
-            return null;
+            return TransactionManager.TransactionQuery(query);
         }
         public IEnumerable<Transaction> GetOutgoing(DateTime? start, DateTime? stop) 
         {
@@ -71,6 +87,10 @@ namespace Banker
                 Stop = null,
                 Query = ((p) => { return true; })
             });
+        }
+        public int GetLoadedTransactionCount()
+        {
+            return TransactionManager.GetActiveCount();
         }
         #endregion
         //load the configuration files
