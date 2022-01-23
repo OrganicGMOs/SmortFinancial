@@ -1,3 +1,13 @@
 {
-  
+  "Definitions": [
+    {
+      "AssignedId": "00000000-0000-0000-0000-000000000000",
+      "CategoryType": "Unknown",
+      "SubTypes": [
+        ""
+      ],
+      "ColorHex": "0xFFFFFF",
+      "ReductionTarget": false
+    }
+  ]
 }
