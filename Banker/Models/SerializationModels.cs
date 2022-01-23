@@ -10,6 +10,7 @@ namespace Banker.Models
 
     public class TransactionDefinitions
     {
+        public bool NeedsWrite { get; set; }
         public List<TransactionDefinition> Definitions { get; set; }
     }
     public class TransactionCategories
@@ -26,6 +27,7 @@ namespace Banker.Models
     }
     public class CategoryDefinitions
     {
+        public bool NeedsWrite { get; set; }
         public List<CategoryDefinition> Definitions { get; set; }
     }
 }

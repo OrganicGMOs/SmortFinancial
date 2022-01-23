@@ -123,6 +123,39 @@ namespace Banker.Apps
         #endregion
 
         #region Document Saving
+        /// <summary>
+        /// At application close if defintions have been modified we need
+        /// to save them.
+        /// </summary>
+        /// <returns></returns>
+        private async Task SaveDefinitions()
+        {
+            var tasks = new List<Task>();
+            if (_defaultCategoryDefinitions.NeedsWrite)
+                tasks.Add(SaveDefintion<CategoryDefinitions>(
+                    _defaultCategoryDefinitions,
+                    _definitions + "\\DefaultCategoryDefinitions.json"));
+            if (_defaultTransactionDefinitions.NeedsWrite)
+                tasks.Add(SaveDefintion<TransactionDefinitions>(
+                    _defaultTransactionDefinitions,
+                    _definitions + "\\DefaultTransactionDefinitions.json"));
+            if (_userCategoryDefinitions.NeedsWrite)
+                tasks.Add(SaveDefintion<CategoryDefinitions>(
+                    _userCategoryDefinitions,
+                    _definitions + "\\CustomCategoryDefinitions.json"
+                    ));
+            if (_userTransactionDefinitions.NeedsWrite)
+                tasks.Add(SaveDefintion<TransactionDefinitions>(
+                    _userTransactionDefinitions,
+                    _definitions + "\\CustomTransactionDefinitions.json"
+                    ));
+            await Task.WhenAll(tasks);
+        }
+        private async Task SaveDefintion<T>(T def, string path)
+        {
+            var json = JsonConvert.SerializeObject(def);
+            await Extensions.WriteFile(json, path);
+        }
         private async Task SaveCategories()
         {
             try
