@@ -14,12 +14,12 @@ var loadedTransactions = banker.GetLoadedTransactionCount();
 Console.WriteLine("Loaded: " + loadedTransactions);
 //JsonCreation();
 var transactions = await ParseFile(file);
-Console.WriteLine("\n\n Ready to save to disk?");
-Console.ReadKey();
-Console.Clear();
+//Console.WriteLine("\n\n Ready to save to disk?");
+//Console.ReadKey();
+//Console.Clear();
 await SaveTransactions(transactions);
 Console.WriteLine("Loaded: " + banker.GetLoadedTransactionCount());
-Console.ReadKey();
+//Console.ReadKey();
 Console.Clear();
 var uber = banker.Search_DateRange(new TransactionQuery());
 float price = 0;
@@ -85,7 +85,7 @@ void JsonCreation()
     var tcfj = JsonConvert.SerializeObject(TCFile,Formatting.Indented);
     WriteToScreen(tcfj);
 
-    TF.Definitions = new TransactionDefinition[]
+    TF.Definitions = new List<TransactionDefinition>
     {
         new TransactionDefinition
         {
@@ -105,7 +105,7 @@ void JsonCreation()
             AssignedId = Guid.Empty,
             CategoryType = "Unknown",
             SubTypes = new[]{""},
-            ColorHex = 0xFFFFFF,
+            ColorHex = "0xFFFFFF",
             ReductionTarget = false
         }
     };

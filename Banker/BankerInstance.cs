@@ -92,6 +92,14 @@ namespace Banker
         {
             return TransactionManager.GetActiveCount();
         }
+        public bool CreateCategoryDefinition(CategoryDefinition def)
+        {
+            return true;
+        }
+        public bool CreateTrasactionDefinition()
+        {
+            return true;
+        }
         #endregion
         //load the configuration files
         #region init

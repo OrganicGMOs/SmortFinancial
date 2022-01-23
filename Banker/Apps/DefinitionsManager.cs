@@ -18,6 +18,15 @@ namespace Banker.Apps
         private string _Definitions;
         private string _Category;
 
+        private string _root;
+        private string _definitions;
+        private CategoryDefinitions _defaultCategoryDefinitions;
+        private CategoryDefinitions _userCategoryDefinitions;
+        private TransactionDefinitions _defaultTransactionDefinitions;
+        private TransactionDefinitions _userTransactionDefinitions;
+        private const string CATEGORYURL = "https://raw.githubusercontent.com/OrganicGMOs/SmortFinancial/main/Definitions/Categories.json";
+        private const string TRANSACTIONURL = "https://raw.githubusercontent.com/OrganicGMOs/SmortFinancial/main/Definitions/Transactions.json";
+
         #region CRUD
         internal bool CreateDefinition(TransactionDefinition def) 
         {
@@ -119,11 +128,11 @@ namespace Banker.Apps
             try
             {
                 var text = JsonConvert.SerializeObject(Categories);
-                await File.WriteAllTextAsync(_Category, text);
-
+                await Extensions.WriteFile(_Category, text);
             }
             catch (Exception ex)
             {
+                //todo: exception and logging
                 Console.WriteLine(ex.Message);
             }
         }
@@ -133,7 +142,6 @@ namespace Banker.Apps
             {
                 var text = JsonConvert.SerializeObject(TransactionDefinitions);
                 await File.WriteAllTextAsync(_Category, text);
-
             }
             catch (Exception ex)
             {
@@ -145,7 +153,12 @@ namespace Banker.Apps
         #region Initialize
         public static async Task<DefinitionsManager> DefinitionsManagerFactory(string root)
         {
-            var instance = new DefinitionsManager();
+            var instance = new DefinitionsManager()
+            {
+                _root = root,
+                _definitions = root +"\\definitions"
+            };
+            await instance.Initialize();
             instance.Categories = new List<TransactionCategory>();
             instance.TransactionDefinitions = new List<TransactionDefinition>();
             instance._Root = root;
@@ -156,19 +169,10 @@ namespace Banker.Apps
         {
             try
             {
-                _Definitions = _Root + "\\TransactionDefinitions";
-                _Category = _Root + "\\Categories";
-                if(!Directory.Exists(_Category))
-                    Directory.CreateDirectory(_Category);
-                if(!Directory.Exists(_Definitions))
-                    Directory.CreateDirectory(_Definitions);
-                var def = LoadTransactionDefinitions();
-                var cat = LoadCategories();
-                await Task.WhenAll(def, cat);
-                if (TransactionDefinitions.Count >= 0)
-                    TransactionDefinitions.Add(new TransactionDefinition()); // add default
-                if(Categories.Count >= 0)
-                    Categories.Add(new TransactionCategory());              // add default
+                var defaultDefs = LoadDefaultDefinitions();
+                var userDefs = LoadUserDefinitions();
+                await Task.WhenAll(defaultDefs, userDefs);
+                await LoadDefaultDefinitions();
 
             }catch(System.UnauthorizedAccessException ex)
             {
@@ -212,6 +216,151 @@ namespace Banker.Apps
                 {
                     Console.WriteLine("puppy scared");
                 }
+            }
+        }
+        private async Task LoadDefaultDefinitions()
+        {
+            var categoryDefinitions = _definitions + "\\DefaultCategoryDefinitions.json";
+            var transactionDefinitions = _definitions + "\\DefaultTransactionDefinitions.json";
+            var tasks = new Task[]
+            {
+                LoadDefaultCategoryDefinitions(categoryDefinitions),
+                LoadDefaultTransactionDefinitions(transactionDefinitions)
+            };
+            await Task.WhenAll(tasks);
+        }
+        private async Task LoadDefaultCategoryDefinitions(string file)
+        {
+            bool rewrite = false;
+            var categories = await ReadandParse<CategoryDefinitions>(file);
+            if(categories == null)
+            {
+                rewrite = true;
+                categories = await AttemptLoadDefault<CategoryDefinitions>(CATEGORYURL);
+            }
+            if (categories == null)
+            {
+                categories = new CategoryDefinitions()
+                {
+                    Definitions = new List<CategoryDefinition>()
+                    {
+                        new CategoryDefinition()
+                        {
+                            AssignedId = Guid.Empty,
+                            CategoryType = "Unknown",
+                            SubTypes = new string[0],
+                            ColorHex = "0xFFFFFF",
+                            ReductionTarget = false,
+                        }
+                    }
+                };
+            }
+                
+            _defaultCategoryDefinitions = categories;
+            if (rewrite)
+            {
+                var json = JsonConvert
+                    .SerializeObject(_defaultCategoryDefinitions, Formatting.Indented);
+                await Extensions.WriteFile(file, json);
+            }
+        }
+        private async Task LoadDefaultTransactionDefinitions(string file)
+        {
+            bool rewrite = false;
+            var transactions = await ReadandParse<TransactionDefinitions>(file);
+            if(transactions == null)
+            {
+                rewrite = true;
+                transactions = await AttemptLoadDefault<TransactionDefinitions>(TRANSACTIONURL);
+            }
+            if (transactions == null)
+                transactions = new TransactionDefinitions()
+                {
+                    Definitions = new List<TransactionDefinition>
+                    {
+                        new TransactionDefinition()
+                        {
+                            AssignedId = Guid.Empty,
+                            Key = "Unkown",
+                            MappedCategory = Guid.Empty,
+                            ReductionTarget = false
+                        }
+                    }
+                };
+
+            _defaultTransactionDefinitions = transactions;
+            if(rewrite)
+            {
+                var json = JsonConvert
+                    .SerializeObject(_defaultTransactionDefinitions, Formatting.Indented);
+                await Extensions.WriteFile(file, json);
+            }    
+        }
+        private async Task LoadUserDefinitions() 
+        {
+            var categoryDefinitions = _definitions + "\\CustomCategoryDefinitions.json";
+            var transactionDefinitions = _definitions + "\\CustomTransactionDefinitions.json";
+            var tasks = new Task[]
+            {
+                LoadUserCategoryDefinitions(categoryDefinitions),
+                LoadUserTransactionDefinitions(transactionDefinitions)
+            };
+            await Task.WhenAll(tasks);
+        }
+        private async Task LoadUserCategoryDefinitions(string file) 
+        { 
+            var categories = await ReadandParse<CategoryDefinitions>(file);
+            if (categories == null)
+                _userCategoryDefinitions = new CategoryDefinitions
+                {
+                    Definitions = new List<CategoryDefinition>()
+                };
+            else
+                _userCategoryDefinitions = categories;
+        }
+        private async Task LoadUserTransactionDefinitions(string file) 
+        {
+            var transactions = await ReadandParse<TransactionDefinitions>(file);
+            if (transactions == null)
+                _userTransactionDefinitions = new TransactionDefinitions
+                {
+                    Definitions = new List<TransactionDefinition>()
+                };
+            else
+                _userTransactionDefinitions = transactions;
+        }
+        private async Task<T?> ReadandParse<T>(string file)
+        {
+            try
+            {
+                var json = await Extensions.ReadFile(file);
+                var obj = JsonConvert.DeserializeObject<T>(json);
+                return obj;
+            }
+            catch(Exception ex)
+            {
+                //todo: exception and logging
+                Console.Error.WriteLine(ex.Message);
+                return default(T);
+            }
+            
+        }
+        private async Task<T?> AttemptLoadDefault<T>(string location) 
+        {
+            using(var client = new HttpClient())
+            {
+                var response = await client.GetAsync(location);
+                if(response.IsSuccessStatusCode)
+                {
+                    var json = await response.Content.ReadAsStringAsync();
+                    var obj = JsonConvert.DeserializeObject<T>(json);
+                    if (obj == null)
+                        return default(T);
+                    else
+                        return obj;
+                }
+                else
+                    return default(T);
             }
         }
         private async Task<ICollection<TransactionCategory>> GetDefaultCategories()

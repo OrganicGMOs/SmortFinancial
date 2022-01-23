@@ -80,10 +80,10 @@ namespace Banker.Apps
             foreach (var set in lineValues)
             {
                 var transaction = ParseImportTransaction(set);
-                if(!CheckForDuplicate(transaction,LoadedTransactions.Transactions))
+                if (!CheckForDuplicate(transaction, LoadedTransactions.Transactions))
                     transactions.Add(ParseImportTransaction(set));
-                
-
+                else
+                    Console.WriteLine("Duplicate");
             }
                 
             LoadedTransactions.Transactions.AddRange(transactions);
@@ -139,16 +139,18 @@ namespace Banker.Apps
                 _lastSaved = valid;
             }
         }
-
         internal IEnumerable<Transaction> TransactionQuery(TransactionQuery query)
         {
             //just going to force uber eats because im curious
             var uber = LoadedTransactions
                 .Transactions.Where(p => p.Description
-                    .Contains("uber eats", StringComparison.OrdinalIgnoreCase));
+                    .Contains("venmo", StringComparison.OrdinalIgnoreCase));
             return uber;
         }
-
+        internal void AssignTransactionDefinition(Guid id, TransactionDefinition definition)
+        {
+            
+        }
         #region FileMangement
         private async Task LoadTransactionHistory()
         {

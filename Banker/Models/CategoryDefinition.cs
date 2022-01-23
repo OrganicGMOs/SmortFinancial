@@ -11,7 +11,7 @@ namespace Banker.Models
         public Guid AssignedId { get; set; }
         public string CategoryType { get; set; }
         public string[] SubTypes { get; set; }
-        public int ColorHex { get; set; }
+        public string ColorHex { get; set; }
         public bool ReductionTarget { get; set; }
     }
 }

@@ -10,7 +10,7 @@ namespace Banker.Models
 
     public class TransactionDefinitions
     {
-        public TransactionDefinition[] Definitions { get; set; }
+        public List<TransactionDefinition> Definitions { get; set; }
     }
     public class TransactionCategories
     {

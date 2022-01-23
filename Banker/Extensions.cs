@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Newtonsoft.Json;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -24,20 +25,41 @@ namespace Banker
         {
             try
             {
-                var s = string.Empty;
-                s = await File.ReadAllTextAsync(path);
-                if (s.Length > 0)
-                    return s;
-                else
+                if (File.Exists(path))
                 {
-                    //todo: expcetion handling
-                    return String.Empty;
+                    var s = string.Empty;
+                    s = await File.ReadAllTextAsync(path);
+                    if (s.Length > 0)
+                        return s;
+                    else
+                    {
+                        //todo: expcetion handling
+                        return String.Empty;
+                    }
                 }
+                else
+                    return String.Empty;
+                
             }
             catch (Exception ex)
             {
                 //todo: expcetion handling
                 return String.Empty;
+            }
+        }
+        public static T? ParseJson<T>(string json)
+        {
+            try
+            {
+                if (json.Length > 0)
+                    return JsonConvert.DeserializeObject<T>(json);
+                else
+                    return default(T);
+            }
+            catch (Exception ex)
+            {
+                //todo: exception and logging
+                return default(T);
             }
         }
     }
