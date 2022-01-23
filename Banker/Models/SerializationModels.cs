@@ -19,6 +19,7 @@ namespace Banker.Models
     public class TransactionHistory
     {
         public string FilePath { get; set; }
+        public bool NeedsWrite { get; set; }
         public DateTime Modified { get; set; }
         public DateTime OldestRecord { get; set; }
         public List<Transaction> Transactions { get; set; }

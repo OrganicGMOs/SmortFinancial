@@ -179,45 +179,6 @@ namespace Banker.Apps
                 Console.WriteLine("Failed to initialize definations manager. Access denied");
             }
         }
-        private async Task LoadTransactionDefinitions()
-        {
-            var content = new List<Task<string>>();
-            var files = Directory.GetFiles(_Definitions);
-            foreach (var file in files)
-            {
-                content.Add(File.ReadAllTextAsync(file));
-            }    
-           var results = await Task.WhenAll(content);
-            foreach(var json in results)
-            {
-                var def = JsonConvert
-                    .DeserializeObject<TransactionDefinitions>(json);
-                if (def != null)
-                    TransactionDefinitions.AddRange(def.Definitions);
-            }
-        }
-        //todo: LoadCategories and defs are really similar
-        private async Task LoadCategories()
-        {
-            var content = new List<Task<string>>();
-            var files = Directory.GetFiles(_Category);
-            foreach (var file in files)
-            {
-                content.Add(File.ReadAllTextAsync(file));
-            }
-            var results = await Task.WhenAll(content);
-            foreach (var json in results)
-            {
-                var def = JsonConvert
-                    .DeserializeObject<TransactionCategory>(json);
-                if (def.CategoryType != null)
-                    Categories.Append(def);
-                else
-                {
-                    Console.WriteLine("puppy scared");
-                }
-            }
-        }
         private async Task LoadDefaultDefinitions()
         {
             var categoryDefinitions = _definitions + "\\DefaultCategoryDefinitions.json";
@@ -334,6 +295,10 @@ namespace Banker.Apps
             try
             {
                 var json = await Extensions.ReadFile(file);
+                if(json == null)
+                    return default(T);
+                if(string.IsNullOrEmpty(json))
+                    return default(T?);
                 var obj = JsonConvert.DeserializeObject<T>(json);
                 return obj;
             }
@@ -362,14 +327,6 @@ namespace Banker.Apps
                 else
                     return default(T);
             }
-        }
-        private async Task<ICollection<TransactionCategory>> GetDefaultCategories()
-        {
-            throw new NotImplementedException();
-        }
-        private async Task<ICollection<TransactionDefinition>> GetDefaultDefinitions()
-        {
-            throw new NotImplementedException();
         }
         #endregion
     }

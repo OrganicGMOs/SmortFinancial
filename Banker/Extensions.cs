@@ -21,6 +21,15 @@ namespace Banker
                 Console.WriteLine(ex.Message);
             }
         }
+        /// <summary>
+        /// Attempts to asyn read a file at a given path.
+        /// </summary>
+        /// <param name="path"></param>
+        /// <returns>
+        ///     string - file contents <br />
+        ///     empty string - couldnt read file <br />
+        ///     null - file doesnt exist
+        /// </returns>
         public static async Task<string> ReadFile(string path)
         {
             try
@@ -38,7 +47,7 @@ namespace Banker
                     }
                 }
                 else
-                    return String.Empty;
+                    return null;
                 
             }
             catch (Exception ex)

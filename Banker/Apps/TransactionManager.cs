@@ -197,52 +197,54 @@ namespace Banker.Apps
             var history = await GetOrCreateHistory(file);
             if (history.Transactions.Count > 0)
             {
-
                 foreach (var t in transactions)
                 {
                     if(CheckForDuplicate(t,history.Transactions))
                     {
-                        //todo: logging and exceptions. enable forced "duplicates"?
+                        //todo: let users have ultimate say if something is "duplicate"
                         Console.WriteLine("Duplicate item, count: " + ++duplicatCount);
                     }
                     else
+                    {
+                        //changes made, commit them
+                        history.NeedsWrite = true;
                         history.Transactions.Add(t);
+                    }
                 }
             }
             else
                 history.Transactions = transactions.ToList();
-            //sort
-            history.Transactions.Sort((a, b) =>
+            if (history.NeedsWrite)
             {
-                return a.Date.CompareTo(b.Date);
-            });
-            var json = JsonConvert.SerializeObject(history, Formatting.Indented);
-            await Extensions.WriteFile(history.FilePath,json);
+                history.Transactions.Sort((a, b) =>
+                {
+                    return a.Date.CompareTo(b.Date);
+                });
+                var json = JsonConvert.SerializeObject(history, Formatting.Indented);
+                await Extensions.WriteFile(history.FilePath, json);
+            }
         }
         private async Task<TransactionHistory> GetOrCreateHistory(string path)
         {
-            if (File.Exists(path))
-            {
-                var json = await Extensions.ReadFile(path);
-                if (json != String.Empty)
-                {
-                    var history = JsonConvert.DeserializeObject<TransactionHistory>(json);
-                    if (history != null)
-                        return history;
-                    else
-                        return StartHistory(path);
-                }
-                else 
-                    return StartHistory(path);
-            }
+            var json = await Extensions.ReadFile(path);
+            TransactionHistory? history;
+            if (json == null)
+                history = StartHistory(path, true); //file dont exist
+            else if(string.IsNullOrEmpty(json))
+                history = StartHistory(path);       //file exist but couldnt read for somereason
             else
-                return StartHistory(path);
+                history = JsonConvert.DeserializeObject<TransactionHistory>(json);
+            if(history == null)
+                return StartHistory(path); //just return and dont overwrite. makes complier happy
+            else
+                return history;            //really just to stop com
         }
-        private TransactionHistory StartHistory(string path)
+        private TransactionHistory StartHistory(string path,bool needsCreation = false)
         {
             return new TransactionHistory()
             {
                 FilePath = path,
+                NeedsWrite = needsCreation,
                 Modified = DateTime.Now,
                 Transactions = new List<Transaction>()
             };
