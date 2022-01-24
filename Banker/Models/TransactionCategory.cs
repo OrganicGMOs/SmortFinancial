@@ -6,11 +6,11 @@ using System.Threading.Tasks;
 
 namespace Banker.Models
 {
-    public class TransactionDefinition
+    public class TransactionCategory
     {
-        public Guid AssignedId { get; set; }
-        public Guid MappedCategory { get; set; }
-        public string Key { get; set; }
+        public string CategoryType { get; set; }
+        public string Subtype { get; set; }
+        public int Color { get; set; }
         public bool ReductionTarget { get; set; }
     }
 }

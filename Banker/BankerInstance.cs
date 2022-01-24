@@ -31,21 +31,37 @@ namespace Banker
                 throw new Exception("File doesnt exist");
                 
         }
-        public IEnumerable<Transaction> LoadTransactionFiles(string[] files) { throw new NotImplementedException(); }
-        public IEnumerable<Transaction> Search_DateRange(TransActQuery query)
+        public async Task SaveTransactions(IEnumerable<Transaction> transactions)
         {
-            //return TransactionManager.TransactionQuery(query);
-            return null;
+            try
+            {
+                //todo: api return types
+                await TransactionManager.SaveTransactions(transactions);
+            }
+            catch(Exception ex)
+            {
+                Console.Error.WriteLine(ex.Message);
+            }
+        }
+        public IEnumerable<Transaction> GetLastSavedTransactions()
+        {
+            return TransactionManager.GetLastSaved();
+        }
+        public IEnumerable<Transaction> LoadTransactionFiles(string[] files) { throw new NotImplementedException(); }
+        //todo: replace hard code look for uber eats lol
+        public IEnumerable<Transaction> Search_DateRange(TransactionQuery query)
+        {
+            return TransactionManager.TransactionQuery(query);
         }
         public IEnumerable<Transaction> GetOutgoing(DateTime? start, DateTime? stop) 
         {
-            return TransactionManager.GetTransactions(new TransActQuery()
+            return TransactionManager.GetTransactions(new TransactionQuery()
             {
                 Start = start,
                 Stop = stop,
                 Query = new Func<Transaction, bool>((p) =>
                 {
-                    return p.Debit;
+                    return p.IsDebit;
                 })
             });
         }
@@ -54,23 +70,35 @@ namespace Banker
         public IEnumerable<Transaction> GetSummary() { throw new NotImplementedException(); }
         public IEnumerable<Transaction> GetCategory(string category) { throw new NotImplementedException(); }
         //todo: Category query class?
-        public IEnumerable<TransactionCategory>GetCategories() 
+        public IEnumerable<CategoryDefinition>GetCategories() 
         {
             return DefinitionsManager.GetCategories();
         }
         //todo: clean query system 
-        public IEnumerable<Transactiondefinition>GetTransactionsDefs()
+        public IEnumerable<TransactionDefinition>GetTransactionsDefs()
         {
             return DefinitionsManager.GetTransactionDefinitions();
         }
         public IEnumerable<Transaction> GetTransactions()
         {
-            return TransactionManager.GetTransactions(new TransActQuery
+            return TransactionManager.GetTransactions(new TransactionQuery
             {
                 Start = null,
                 Stop = null,
                 Query = ((p) => { return true; })
             });
+        }
+        public int GetLoadedTransactionCount()
+        {
+            return TransactionManager.GetActiveCount();
+        }
+        public bool CreateCategoryDefinition(CategoryDefinition def)
+        {
+            return true;
+        }
+        public bool CreateTrasactionDefinition()
+        {
+            return true;
         }
         #endregion
         //load the configuration files
