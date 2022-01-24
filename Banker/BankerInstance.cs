@@ -70,7 +70,7 @@ namespace Banker
         public IEnumerable<Transaction> GetSummary() { throw new NotImplementedException(); }
         public IEnumerable<Transaction> GetCategory(string category) { throw new NotImplementedException(); }
         //todo: Category query class?
-        public IEnumerable<TransactionCategory>GetCategories() 
+        public IEnumerable<CategoryDefinition>GetCategories() 
         {
             return DefinitionsManager.GetCategories();
         }

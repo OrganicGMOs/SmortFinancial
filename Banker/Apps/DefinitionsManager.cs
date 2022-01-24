@@ -10,16 +10,9 @@ namespace Banker.Apps
 {
     internal class DefinitionsManager
     {
-        public List<TransactionDefinition> TransactionDefinitions;
-        public List<TransactionCategory> Categories;
-        public event EventHandler<TransactionDefinition> TransactionDefinitionsChanged;
-        public event EventHandler<TransactionCategory> TransactionCategoriesCleared;
-        private string _Root;
-        private string _Definitions;
-        private string _Category;
-
-        private string _root;
         private string _definitions;
+        private List<TransactionDefinition> _transactionDefs;
+        private List<CategoryDefinition> _categoryDefs;
         private CategoryDefinitions _defaultCategoryDefinitions;
         private CategoryDefinitions _userCategoryDefinitions;
         private TransactionDefinitions _defaultTransactionDefinitions;
@@ -30,29 +23,24 @@ namespace Banker.Apps
         #region CRUD
         internal bool CreateDefinition(TransactionDefinition def) 
         {
-            //make sure def doesnt exist
-            var exist = TransactionDefinitions.Where(p => p.Key == def.Key)
-                .FirstOrDefault();
-            if (exist == null)
-                TransactionDefinitions.Add(def);
+            if (CheckForDuplicateDefinition(def))
+                UpdateCollections(def);
             else
                 return false;
             return true;
         }
-        internal bool CreateCategory(TransactionCategory category) 
+        internal bool CreateCategory(CategoryDefinition category) 
         {
-            var exist = Categories.Where(p => p.CategoryType == category.CategoryType)
-                .FirstOrDefault();
-            if (exist == null)
-                Categories.Add(category);
+            if (CheckForDuplicateDefinition(category))
+                UpdateCollections(category);
             else
                 return false;
             return true;
+
         }
         internal bool UpdateDefinition(TransactionDefinition trans) 
         {
-            var item = TransactionDefinitions.Where(p => p.Key == trans.Key)
-                .FirstOrDefault();
+            var item = GetSingleDefinition(trans);
             if (item == null)
                 return false;
             else
@@ -62,64 +50,121 @@ namespace Banker.Apps
                 return true;
             }            
         }
-        internal bool UpdateCategory(TransactionCategory cat) 
+        internal bool UpdateCategory(CategoryDefinition cat) 
         {
-            var item = Categories.Where(p => p.CategoryType == cat.CategoryType)
-                .FirstOrDefault();
+            var item = GetSingleDefinition(cat);
             if (item == null)
                 return false;
             else
             {
-                item.Subtype = cat.Subtype;
+                item.SubTypes = cat.SubTypes;
                 item.ReductionTarget = cat.ReductionTarget;
                 item.CategoryType = cat.CategoryType;
-                item.Color = cat.Color;
+                item.ColorHex = cat.ColorHex;
                 item.ReductionTarget = cat.ReductionTarget;
                 return true;
             }
         }
         internal bool DeleteDefinition(TransactionDefinition def) 
         {
-            var item = TransactionDefinitions.Where(p => p.Key == def.Key)
-                .FirstOrDefault();
-            if (item == null)
-                return false;
+            if (CheckForDuplicateDefinition(def))
+                UpdateCollections(def, false);
             else
-                TransactionDefinitions.Remove(item);
+                return false;
             return true;
         }
-        internal bool DeleteCategory(TransactionCategory cat) 
+        internal bool DeleteCategory(CategoryDefinition cat) 
         {
-            var item = Categories.Where(p => p.CategoryType == cat.CategoryType)
-                .FirstOrDefault();
-            if (item == null)
-                return false;
+            if (CheckForDuplicateDefinition(cat))
+                UpdateCollections(cat, false);
             else
-                Categories.Remove(item);
+                return false;
             return true;
         }
+        /// <summary>
+        /// gets a described transaction defintion if it exists. <br/>
+        /// returns default transaction if item does not exist
+        /// </summary>
+        /// <param name="key">key value of transaction</param>
+        /// <returns>TransactionDefition with inputted key</returns>
         internal TransactionDefinition GetDefinition(string key)
         {
-            var item = TransactionDefinitions.Where(p => p.Key == key)
+            var item = _transactionDefs.Where(p => p.Key == key)
                 .FirstOrDefault();
             if (item == null)
                 return new TransactionDefinition();
             return item;
         }
-        internal TransactionCategory? GetCategory(string key)
+        internal CategoryDefinition GetCategory(string key)
         {
-            var item = Categories.Where(p => p.CategoryType == key)
+            var item = _categoryDefs.Where(p => p.CategoryType == key)
                 .FirstOrDefault();
+            if(item == null)
+                return new CategoryDefinition();
             return item;
         }
         internal IEnumerable<TransactionDefinition> GetTransactionDefinitions() 
         {
-            return TransactionDefinitions.ToList();
+            return _transactionDefs.ToList();
         }
-        internal IEnumerable<TransactionCategory> GetCategories() 
+        internal IEnumerable<CategoryDefinition> GetCategories() 
         {
-            return Categories.ToList();
+            return _categoryDefs.ToList();
         }
+        private bool CheckForDuplicateDefinition(TransactionDefinition def)
+        {
+            var exist = _transactionDefs.Where(p => p.Key == def.Key)
+             .FirstOrDefault();
+            if (exist == null)
+                return false;
+            else
+                return true;
+        }
+        private bool CheckForDuplicateDefinition(CategoryDefinition def)
+        {
+            var exist = _categoryDefs.Where(p => p.CategoryType == def.CategoryType)
+             .FirstOrDefault();
+            if (exist == null)
+                return false;
+            else
+                return true;
+        }
+        //add to the two collections. maybe we shouldnt split them? saving is easier though
+            //marks serialize object as needing to re-write
+        private void UpdateCollections(TransactionDefinition def, bool add = true)
+        {
+            if (add)
+            {
+                _transactionDefs.Add(def);
+                _userTransactionDefinitions.Definitions.Add(def);
+            }
+            else
+            {
+                _transactionDefs.Remove(def);
+                _userTransactionDefinitions.Definitions.Remove(def);
+            }
+            
+            _userCategoryDefinitions.NeedsWrite = true;
+        }
+        private void UpdateCollections(CategoryDefinition def, bool add = true)
+        {
+            if (add)
+            {
+                _categoryDefs.Add(def);
+                _userCategoryDefinitions.Definitions.Add(def);
+            }
+            {
+                _categoryDefs.Remove(def);
+                _userCategoryDefinitions.Definitions.Remove(def);
+            }
+            _userCategoryDefinitions.NeedsWrite = true;
+        }
+        private TransactionDefinition GetSingleDefinition(TransactionDefinition def) {
+            var item = _transactionDefs.Where(p => p.AssignedId == def.AssignedId)
+                .FirstOrDefault();
+            return item;
+        }
+        private CategoryDefinition GetSingleDefinition(CategoryDefinition df) { throw new NotImplementedException(); }
         #endregion
 
         #region Document Saving
@@ -156,31 +201,6 @@ namespace Banker.Apps
             var json = JsonConvert.SerializeObject(def);
             await Extensions.WriteFile(json, path);
         }
-        private async Task SaveCategories()
-        {
-            try
-            {
-                var text = JsonConvert.SerializeObject(Categories);
-                await Extensions.WriteFile(_Category, text);
-            }
-            catch (Exception ex)
-            {
-                //todo: exception and logging
-                Console.WriteLine(ex.Message);
-            }
-        }
-        private async Task SaveTransactionDefinitions()
-        {
-            try
-            {
-                var text = JsonConvert.SerializeObject(TransactionDefinitions);
-                await File.WriteAllTextAsync(_Category, text);
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine(ex.Message);
-            }
-        }
         #endregion
 
         #region Initialize
@@ -188,13 +208,8 @@ namespace Banker.Apps
         {
             var instance = new DefinitionsManager()
             {
-                _root = root,
                 _definitions = root +"\\definitions"
             };
-            await instance.Initialize();
-            instance.Categories = new List<TransactionCategory>();
-            instance.TransactionDefinitions = new List<TransactionDefinition>();
-            instance._Root = root;
             await instance.Initialize();
             return instance;
         }
@@ -206,6 +221,10 @@ namespace Banker.Apps
                 var userDefs = LoadUserDefinitions();
                 await Task.WhenAll(defaultDefs, userDefs);
                 await LoadDefaultDefinitions();
+                _transactionDefs = _defaultTransactionDefinitions.Definitions.ToList();
+                _transactionDefs.AddRange(_userTransactionDefinitions.Definitions);
+                _categoryDefs = _defaultCategoryDefinitions.Definitions.ToList();
+                _categoryDefs.AddRange(_userCategoryDefinitions.Definitions);
 
             }catch(System.UnauthorizedAccessException ex)
             {
@@ -362,5 +381,10 @@ namespace Banker.Apps
             }
         }
         #endregion
+
+        internal async Task Close()
+        {
+            await SaveDefinitions();
+        }
     }
 }

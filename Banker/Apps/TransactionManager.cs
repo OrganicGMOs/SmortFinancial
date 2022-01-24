@@ -141,11 +141,8 @@ namespace Banker.Apps
         }
         internal IEnumerable<Transaction> TransactionQuery(TransactionQuery query)
         {
-            //just going to force uber eats because im curious
-            var uber = LoadedTransactions
-                .Transactions.Where(p => p.Description
-                    .Contains("venmo", StringComparison.OrdinalIgnoreCase));
-            return uber;
+            //todo
+            return null;
         }
         internal void AssignTransactionDefinition(Guid id, TransactionDefinition definition)
         {
@@ -283,5 +280,10 @@ namespace Banker.Apps
             await LoadTransactionHistory();
         }
         #endregion
+
+        internal async Task Close()
+        {
+
+        }
     }
 }
