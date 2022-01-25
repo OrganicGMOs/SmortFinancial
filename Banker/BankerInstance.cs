@@ -1,4 +1,5 @@
 ﻿using Banker.Apps;
+using Banker.Interfaces;
 using Banker.Models;
 using Newtonsoft.Json;
 using System;
@@ -99,6 +100,51 @@ namespace Banker
         public bool CreateTrasactionDefinition()
         {
             return true;
+        }
+        #endregion
+
+        //'api' end points are where we could add input checks if it becomes necessary
+        #region api2
+        public async Task<IBankerResult> CreateCategoryDefinition(ICategoryDefinition category)
+        {
+            try
+            {
+                await Task.Yield();
+                var cat = new CategoryDefinition()
+                {
+                    AssignedId = Guid.NewGuid(),
+                    CategoryType = category.Name,
+                    SubTypes = category.Tags,
+                    ColorHex = category.Color,
+                    ReductionTarget = category.ReductionTarget
+                };
+                DefinitionsManager.CreateCategory(cat);
+                return GenerateResult();
+            }
+            catch (Exception ex)
+            {
+                return GenerateResult(false, "implement custom exceptions");
+            }
+        }
+        public async Task<IBankerResult> GetCategoryDefinition(string categoryName)
+        {
+            var category = DefinitionsManager.GetCategory(categoryName);
+            await Task.Yield();
+            return GenerateResult(value: category);
+        }
+
+        private IBankerResult GenerateResult(bool success = true, 
+            string msg = "",List<object>? coll = null, 
+            object? value = null)
+        {
+            var result = new BankerResult
+            {
+                IsSuccess = success,
+                ErrorMessage = msg,
+                _dynamicCollection = coll,
+                _dynamicObject = value
+            };
+            return result;
         }
         #endregion
         //load the configuration files

@@ -31,7 +31,7 @@ namespace Banker.Apps
         }
         internal bool CreateCategory(CategoryDefinition category) 
         {
-            if (CheckForDuplicateDefinition(category))
+            if (!CheckForDuplicateDefinition(category))
                 UpdateCollections(category);
             else
                 return false;
@@ -153,6 +153,7 @@ namespace Banker.Apps
                 _categoryDefs.Add(def);
                 _userCategoryDefinitions.Definitions.Add(def);
             }
+            else
             {
                 _categoryDefs.Remove(def);
                 _userCategoryDefinitions.Definitions.Remove(def);

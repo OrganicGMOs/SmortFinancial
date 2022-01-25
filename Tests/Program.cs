@@ -1,5 +1,6 @@
 // See https://aka.ms/new-console-template for more information
 using Banker;
+using Banker.Interfaces;
 using Banker.Models;
 using Newtonsoft.Json;
 using System;
@@ -8,32 +9,26 @@ using System.Linq;
 Console.WriteLine("Hello, lets read your transactions");
 
 var file = Environment.GetFolderPath(Environment.SpecialFolder.Desktop) + "\\transactions.CSV";
-Console.WriteLine("loading");
 var banker = await BankerInstance.BankerFactory();
-var loadedTransactions = banker.GetLoadedTransactionCount();
-Console.WriteLine("Loaded: " + loadedTransactions);
-//JsonCreation();
-var transactions = await ParseFile(file);
-//Console.WriteLine("\n\n Ready to save to disk?");
-//Console.ReadKey();
-//Console.Clear();
-await SaveTransactions(transactions);
-Console.WriteLine("Loaded: " + banker.GetLoadedTransactionCount());
-//Console.ReadKey();
-Console.Clear();
-var uber = banker.Search_DateRange(new TransactionQuery());
-float price = 0;
-foreach (var u in uber)
-    if (u.IsDebit)
-        price += u.Value;
-Console.WriteLine(String.Format("Found {0} uber eats entries for a total of ${1} spent in the past year",
-    uber.Count(),
-    price));
+if((await banker.CreateCategoryDefinition(new CategoryDef
+{
+    Name = "Temp Category",
+    Tags = new[] {"cat 1","cat 2","cat 3"},
+    Color = "0xFFFFFF",
+    ReductionTarget = false
+})).IsSuccess)
+{
+    Console.WriteLine("Success");
+    var result = await banker.GetCategoryDefinition("Temp Category");
+    var value = result.GetValue<CategoryDefinition>();
+    Console.WriteLine(value.AssignedId);
+    Console.WriteLine(value.CategoryType);
+}
+else
+{
+    Console.WriteLine("Failed to update category");
+}
 Console.ReadKey();
-
-
-
-
 void JsonCreation()
 {
     var TransactionFile = new TransactionHistory()
@@ -126,7 +121,7 @@ async Task<IEnumerable<Transaction>> ParseFile(string location){
 
     Console.WriteLine("Parsing file");
     var response = await banker.LoadNewTransactionFile(file);
-    transactions = banker.GetTransactions();
+    var transactions = banker.GetTransactions();
     foreach (var transaction in response)
         Console.WriteLine(transaction.Description);
     Console.WriteLine(transactions.Count() + " Transactions");
@@ -145,5 +140,11 @@ async Task SaveTransactions(IEnumerable<Transaction> transactions)
         Console.WriteLine(transaction.Description);
 }
 
-Console.ReadKey();
+public class CategoryDef : ICategoryDefinition
+{
+    public string Name { get; set; }
+    public string[] Tags { get; set; }
+    public string Color { get; set; }
+    public bool ReductionTarget { get; set; }
+}
 
