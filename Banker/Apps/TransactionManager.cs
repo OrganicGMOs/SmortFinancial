@@ -1,4 +1,5 @@
-﻿using Banker.Models;
+﻿using Banker.Interfaces;
+using Banker.Models;
 using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
@@ -8,9 +9,12 @@ using System.Threading.Tasks;
 
 namespace Banker.Apps
 {
+    //dispoable so we can save files at the end. google says its a bad idea, but I just wanna make
+    //sure the files get updated at the end
     internal class TransactionManager
     {
         private TransactionHistory LoadedTransactions;
+        private IEnumerable<Transaction> PendingSave;
         private IEnumerable<Transaction> _lastSaved;
         private string _root;
         private string _transactionDir;
@@ -264,6 +268,109 @@ namespace Banker.Apps
             else
                 return false;
         }
+        internal async Task<IEnumerable<Transaction>> ProcessQuery(ITransactionQuery query)
+        {
+            await Task.Yield();
+            //lol kinda fun to write that. main filter
+            var transactions = FilterDebitCredit(
+                PriceFilter(
+                    QueryDates(
+                        query.NotBefore,query.NotAfter),
+                    query.Min,query.Max),query.DebitOnly,query.CreditOnly);
+            transactions = FilterTransactionDefinitions(transactions,query.TransactionIds);
+            transactions = FilterCategoryDefinitions(transactions,query.CategoryIds);
+            transactions = FilterSubCategories(transactions, query.SubCategory);
+            transactions = FilterTags(transactions, query.Tags);
+            return transactions;
+
+                
+        }
+        private IEnumerable<Transaction> QueryDates(DateTime? start, DateTime? end)
+        {
+            if (start == null && end == null) //get everything
+                return LoadedTransactions.Transactions.ToList();
+            else
+            {
+                if (start == null)
+                {
+                    return LoadedTransactions.Transactions
+                        .Where(p => p.Date <= end)
+                        .ToList();
+                }
+                else if (end == null)
+                {
+                    return LoadedTransactions.Transactions
+                        .Where(p => p.Date >= start)
+                        .ToList();
+                }
+                else
+                {
+                    return LoadedTransactions.Transactions
+                        .Where(p => p.Date >= start && p.Date <= end)
+                        .ToList();
+                }
+            } //else we have a date range
+        }
+        private IEnumerable<Transaction> PriceFilter(IEnumerable<Transaction> set, float? min, float? max)
+        {
+            if (min == null && max == null)
+                return set;
+            else
+            {
+                if (min == null)
+                    return set.Where(p => p.Value <= max);
+                else if(max == null)
+                    return set.Where(p => p.Value >= min);
+                else
+                    return set.Where(p => p.Value >= min && p.Value <= max);
+            }
+        }
+        private IEnumerable<Transaction> FilterDebitCredit(IEnumerable<Transaction> set, bool? debit, bool? credit)
+        {
+            if (debit == null && credit == null)
+                return set;
+            else
+            {
+                if (debit == null)
+                    return set.Where(p => p.IsDebit == false);
+                else if (credit == null)
+                    return set.Where(p => p.IsDebit == true);
+                else //just return everything
+                    return set;
+            }
+        }
+        private IEnumerable<Transaction> FilterTransactionDefinitions(IEnumerable<Transaction>set, IEnumerable<Guid>? definitions)
+        {
+            if (definitions == null)
+                return set;
+            else
+                return set.Where(
+                    p => definitions.Contains(p.TransactionType.AssignedId));
+        }
+        private IEnumerable<Transaction> FilterCategoryDefinitions(IEnumerable<Transaction>set, IEnumerable<Guid>? definitions)
+        {
+            if (definitions == null)
+                return set;
+            else
+                return set.Where(p => definitions.Contains(p.TransactionType.MappedCategory));
+        }
+        private IEnumerable<Transaction> FilterSubCategories(IEnumerable<Transaction>set, IEnumerable<string>? subcategories)
+        {
+            if (subcategories == null)
+                return set;
+            else
+                return set.Where(p => subcategories.Contains(p.Category.Subtype));
+        }
+        private IEnumerable<Transaction> FilterTags(IEnumerable<Transaction> set, IEnumerable<string>? tags)
+        {
+            if (tags == null)
+                return set;
+            else
+            {
+               return set.Where(p => 
+                p.Tags.Union(tags).Count() > 0);
+            }
+        }
         #region Initialization
         public static async Task<TransactionManager> TransactionManagerFactory(string root)
         {
@@ -280,10 +387,5 @@ namespace Banker.Apps
             await LoadTransactionHistory();
         }
         #endregion
-
-        internal async Task Close()
-        {
-
-        }
     }
 }

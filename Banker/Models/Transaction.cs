@@ -15,5 +15,6 @@ namespace Banker.Models
         public float Value { get; set; }
         public TransactionDefinition TransactionType { get; set; }
         public TransactionCategory Category { get; set; }
+        public List<string> Tags { get; set; }
     }
 }

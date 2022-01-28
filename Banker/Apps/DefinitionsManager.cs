@@ -144,7 +144,7 @@ namespace Banker.Apps
                 _userTransactionDefinitions.Definitions.Remove(def);
             }
             
-            _userCategoryDefinitions.NeedsWrite = true;
+            _userTransactionDefinitions.NeedsWrite = true;
         }
         private void UpdateCollections(CategoryDefinition def, bool add = true)
         {
@@ -160,7 +160,7 @@ namespace Banker.Apps
             }
             _userCategoryDefinitions.NeedsWrite = true;
         }
-        private TransactionDefinition GetSingleDefinition(TransactionDefinition def) {
+        private TransactionDefinition? GetSingleDefinition(TransactionDefinition def) {
             var item = _transactionDefs.Where(p => p.AssignedId == def.AssignedId)
                 .FirstOrDefault();
             return item;
@@ -174,7 +174,7 @@ namespace Banker.Apps
         /// to save them.
         /// </summary>
         /// <returns></returns>
-        private async Task SaveDefinitions()
+        internal async Task SaveDefinitions()
         {
             var tasks = new List<Task>();
             if (_defaultCategoryDefinitions.NeedsWrite)

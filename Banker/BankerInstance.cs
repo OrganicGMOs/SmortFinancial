@@ -132,7 +132,18 @@ namespace Banker
             await Task.Yield();
             return GenerateResult(value: category);
         }
-
+        public async Task<IBankerResult> ModifyCategory(ICategoryDefinition category) { }
+        public async Task<IBankerResult> TagTransaction(ITransactionDefinition transcation, string tag) { }
+        public async Task<IBankerResult> SetTransactionConditional(ITransactionDefinition transcation, string tag)
+        public async Task<IBankerResult> QueryTransactions() { throw new NotImplementedException(); }
+        public async Task Close()
+        {
+            await DefinitionsManager.SaveDefinitions();
+        }
+        public async Task SaveChanges()
+        {
+            throw new NotImplementedException();
+        }
         private IBankerResult GenerateResult(bool success = true, 
             string msg = "",List<object>? coll = null, 
             object? value = null)
@@ -147,6 +158,10 @@ namespace Banker
             return result;
         }
         #endregion
+
+        //maybe move to another class
+        #region QueryParse
+
         //load the configuration files
         #region init
         public static async Task<BankerInstance> BankerFactory()
