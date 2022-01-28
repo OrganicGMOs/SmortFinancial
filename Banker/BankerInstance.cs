@@ -135,6 +135,7 @@ namespace Banker
         }
         public async Task<IBankerResult> SetTransactionConditional(ITransactionDefinition transcation, string tag)
         {
+            //not really sure what this even is yet
             try
             {
                 return GenerateResult(false, "implement custom exceptions");

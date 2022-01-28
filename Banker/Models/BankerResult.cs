@@ -23,7 +23,6 @@ namespace Banker.Models
             else 
                 return default;
         }
-
         public IEnumerable<T> GetValueCollection<T>()
         {
             if(_dynamicCollection != null)

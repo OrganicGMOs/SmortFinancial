@@ -263,6 +263,7 @@ namespace Banker.Apps
             else
                 return false;
         }
+        //probably a much better way to do this
         internal async Task<IEnumerable<Transaction>> ProcessQuery(ITransactionQuery query)
         {
             await Task.Yield();

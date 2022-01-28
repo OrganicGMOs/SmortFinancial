@@ -13,15 +13,11 @@ namespace Banker.Models
         public DateTime? NotAfter { get; set; }
         public float? Min { get; set; }
         public float? Max { get; set; }
-        public Guid? TransactionId { get; set; }
-        public Guid? CategoryId { get; set; }
-        public string? SubCategory { get; set; }
-        public IEnumerable<string>? Tags { get; set; }
         public bool? CreditOnly { get; set; }
         public bool? DebitOnly { get; set; }
         public List<Guid>? TransactionIds { get; set; }
         public List<Guid>? CategoryIds { get; set; }
-        List<string>? ITransactionQuery.SubCategory { get; set; }
-        List<string>? ITransactionQuery.Tags { get; set; }
+        public List<string>? SubCategory { get; set; }
+        public List<string>? Tags { get; set; }
     }
 }
