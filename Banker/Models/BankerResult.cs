@@ -31,7 +31,7 @@ namespace Banker.Models
                 var first = _dynamicCollection
                     .FirstOrDefault();
                 if (first is T)
-                    return (IEnumerable<T>)_dynamicCollection;
+                    return _dynamicCollection.Cast<T>();
                 else
                     return Enumerable.Empty<T>();
             }

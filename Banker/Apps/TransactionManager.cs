@@ -95,12 +95,7 @@ namespace Banker.Apps
         }
         public IEnumerable<Transaction>GetTransactions(TransactionQuery query)
         {
-            var items = GetTransactions_TimeSpan(query.Start, query.Stop);
-            var result = new List<Transaction>();
-            foreach (var item in items)
-                if (query.Query.Invoke(item))
-                    result.Add(item);
-            return result;
+            throw new NotImplementedException();
         }
         internal int GetActiveCount()
         {
@@ -282,8 +277,6 @@ namespace Banker.Apps
             transactions = FilterSubCategories(transactions, query.SubCategory);
             transactions = FilterTags(transactions, query.Tags);
             return transactions;
-
-                
         }
         private IEnumerable<Transaction> QueryDates(DateTime? start, DateTime? end)
         {

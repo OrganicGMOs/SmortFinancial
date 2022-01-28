@@ -10,6 +10,18 @@ Console.WriteLine("Hello, lets read your transactions");
 
 var file = Environment.GetFolderPath(Environment.SpecialFolder.Desktop) + "\\transactions.CSV";
 var banker = await BankerInstance.BankerFactory();
+var something = await banker.QueryTransactions(new Banker.Models.TransactionQuery
+{
+    CreditOnly = true,
+});
+var result1 = something.GetValueCollection<Transaction>();
+float count = 0.00f;
+foreach(var transaction in result1)
+{
+    count += transaction.Value;
+}
+Console.WriteLine(count);
+Console.ReadKey();
 if((await banker.CreateCategoryDefinition(new CategoryDef
 {
     Name = "Temp Category",
@@ -121,10 +133,10 @@ async Task<IEnumerable<Transaction>> ParseFile(string location){
 
     Console.WriteLine("Parsing file");
     var response = await banker.LoadNewTransactionFile(file);
-    var transactions = banker.GetTransactions();
+    //var transactions = banker.GetTransactions();
     foreach (var transaction in response)
         Console.WriteLine(transaction.Description);
-    Console.WriteLine(transactions.Count() + " Transactions");
+    //Console.WriteLine(transactions.Count() + " Transactions");
     return response;
 }
 

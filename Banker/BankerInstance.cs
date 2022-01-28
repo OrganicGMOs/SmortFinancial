@@ -54,18 +54,6 @@ namespace Banker
         {
             return TransactionManager.TransactionQuery(query);
         }
-        public IEnumerable<Transaction> GetOutgoing(DateTime? start, DateTime? stop) 
-        {
-            return TransactionManager.GetTransactions(new TransactionQuery()
-            {
-                Start = start,
-                Stop = stop,
-                Query = new Func<Transaction, bool>((p) =>
-                {
-                    return p.IsDebit;
-                })
-            });
-        }
         public IEnumerable<Transaction> GetIncomming() { throw new NotImplementedException(); }
         public IEnumerable<Transaction> GetReduceTargets() { throw new NotImplementedException(); }
         public IEnumerable<Transaction> GetSummary() { throw new NotImplementedException(); }
@@ -79,15 +67,6 @@ namespace Banker
         public IEnumerable<TransactionDefinition>GetTransactionsDefs()
         {
             return DefinitionsManager.GetTransactionDefinitions();
-        }
-        public IEnumerable<Transaction> GetTransactions()
-        {
-            return TransactionManager.GetTransactions(new TransactionQuery
-            {
-                Start = null,
-                Stop = null,
-                Query = ((p) => { return true; })
-            });
         }
         public int GetLoadedTransactionCount()
         {
@@ -132,10 +111,51 @@ namespace Banker
             await Task.Yield();
             return GenerateResult(value: category);
         }
-        public async Task<IBankerResult> ModifyCategory(ICategoryDefinition category) { }
-        public async Task<IBankerResult> TagTransaction(ITransactionDefinition transcation, string tag) { }
+        public async Task<IBankerResult> ModifyCategory(ICategoryDefinition category)
+        {
+            try
+            {
+                return GenerateResult(false, "implement custom exceptions");
+            }
+            catch(Exception ex)
+            {
+                return GenerateResult(false, "implement custom exceptions");
+            }
+        }
+        public async Task<IBankerResult> TagTransaction(ITransactionDefinition transcation, string tag) 
+        {
+            try
+            {
+                return GenerateResult(false, "implement custom exceptions");
+            }
+            catch (Exception ex)
+            {
+                return GenerateResult(false, "implement custom exceptions");
+            }
+        }
         public async Task<IBankerResult> SetTransactionConditional(ITransactionDefinition transcation, string tag)
-        public async Task<IBankerResult> QueryTransactions() { throw new NotImplementedException(); }
+        {
+            try
+            {
+                return GenerateResult(false, "implement custom exceptions");
+            }
+            catch (Exception ex)
+            {
+                return GenerateResult(false, "implement custom exceptions");
+            }
+        }
+        public async Task<IBankerResult> QueryTransactions(ITransactionQuery query) 
+        {
+            try
+            {
+                var result = await TransactionManager.ProcessQuery(query);
+                return GenerateResult(true,string.Empty,new List<object>(result));
+            }
+            catch (Exception ex)
+            {
+                return GenerateResult(false, "implement custom exceptions");
+            }
+        }
         public async Task Close()
         {
             await DefinitionsManager.SaveDefinitions();
@@ -159,8 +179,6 @@ namespace Banker
         }
         #endregion
 
-        //maybe move to another class
-        #region QueryParse
 
         //load the configuration files
         #region init
