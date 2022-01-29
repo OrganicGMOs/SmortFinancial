@@ -27,9 +27,8 @@ namespace Banker.Apps
         internal Task CreateCategory(ICategoryDefinition category)
         {
             //make sure it doesnt exist
-            var current = _categoryDefs.Where(p => p.CategoryType == category.Name)
-                .FirstOrDefault();
-            if (current != null)
+            var current = GetCategory(category.Name);
+            if(current != null)
                 throw new InvalidDataException("Category already exists");
             UpdateCollections(new CategoryDefinition
             {
@@ -65,26 +64,54 @@ namespace Banker.Apps
                 UpdateCollections(item,false);
             return Task.CompletedTask;
         }
+
+        internal Task CreateTransaction(ITransactionDefinition transaction)
+        {
+            var current = GetTransaction(transaction.Key);
+            if (current != null)
+                throw new InvalidDataException("Transaction Definition already exists");
+            else
+            {
+                UpdateCollections(new TransactionDefinition
+                {
+                    AssignedId = Guid.NewGuid(),
+                    MappedCategory = transaction.MappedCategory,
+                    Key = transaction.Key,
+                    ReductionTarget = transaction.ReductionTarget,
+                });
+            }
+            return Task.CompletedTask;
+        }
+        internal Task ModifyTransaction(ITransactionDefinition transaction)
+        {
+            var current = GetTransactionById(transaction.Id);
+            if (current != null)
+            {
+                current.MappedCategory = transaction.MappedCategory;
+                current.Key = transaction.Key;
+                current.AssignedId = transaction.Id;
+                current.ReductionTarget = transaction.ReductionTarget;
+                if (_defaultTransactionDefinitions.Definitions.Contains(current))
+                    _defaultTransactionDefinitions.NeedsWrite = true;
+                else
+                    _userTransactionDefinitions.NeedsWrite = true;
+                return Task.CompletedTask;
+            }
+            else
+                throw new TransactionNotFoundException();
+                
+        }
+        internal Task DeleteTransaction(ITransactionDefinition transaction)
+        {
+            var toDelete = GetTransactionById(transaction.Id);
+            if (toDelete == null)
+                throw new TransactionNotFoundException();
+            else
+                UpdateCollections(toDelete, false);
+            return Task.CompletedTask;
+        }
         #endregion
         #region Helpers
-        private bool CheckForDuplicateDefinition(TransactionDefinition def)
-        {
-            var exist = _transactionDefs.Where(p => p.Key == def.Key)
-             .FirstOrDefault();
-            if (exist == null)
-                return false;
-            else
-                return true;
-        }
-        private bool CheckForDuplicateDefinition(string key)
-        {
-            var exist = _categoryDefs.Where(p => p.CategoryType == key)
-             .FirstOrDefault();
-            if (exist == null)
-                return false;
-            else
-                return true;
-        }
         //add to the two collections. maybe we shouldnt split them? saving is easier though
         //marks serialize object as needing to re-write
         private void UpdateCollections(TransactionDefinition def, bool add = true)
@@ -120,13 +147,21 @@ namespace Banker.Apps
         {
             var item = _categoryDefs.Where(p => p.CategoryType == key)
                 .FirstOrDefault();
-            if (item == null)
-                return new CategoryDefinition();
             return item;
         }
         internal CategoryDefinition? GetCategoryById(Guid id)
         {
             return _categoryDefs.Where(p => p.AssignedId == id)
+                .FirstOrDefault();
+        }
+        internal TransactionDefinition? GetTransaction(string key)
+        {
+            return _transactionDefs.Where(p => p.Key == key)
+                .FirstOrDefault();
+        }
+        internal TransactionDefinition? GetTransactionById(Guid id)
+        {
+            return _transactionDefs.Where(p => p.AssignedId == id)
                 .FirstOrDefault();
         }
         #endregion

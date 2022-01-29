@@ -38,6 +38,10 @@ namespace Banker
             await Task.Yield();
             return RunAction(DefinitionsManager.DeleteCategory,category);
         }
+        public async Task<IBankerResult> CreateTransactionDefinition(ITransactionDefinition transaction)
+        {
+
+        }
         public async Task<IBankerResult> QueryTransactions(ITransactionQuery query) 
         {
             try

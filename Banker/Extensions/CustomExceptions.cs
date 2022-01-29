@@ -13,4 +13,11 @@ namespace Banker.Extensions.CustomExceptions
         internal CategoryNotFoundException (string message,Exception innerException) 
             : base(message, innerException) { }
     }
+    public class TransactionNotFoundException : Exception
+    {
+        internal TransactionNotFoundException() { }
+        internal TransactionNotFoundException(string message) : base(message) { }
+        internal TransactionNotFoundException(string message, Exception innerException)
+            : base(message, innerException) { }
+    }
 }
