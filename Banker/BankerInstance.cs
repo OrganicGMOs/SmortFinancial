@@ -3,6 +3,7 @@ using Banker.Interfaces;
 using Banker.Models;
 using Newtonsoft.Json;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
@@ -14,136 +15,28 @@ namespace Banker
         internal static DefinitionsManager DefinitionsManager;
         internal static TransactionManager TransactionManager;
 
-        #region api
-        public async Task<IEnumerable<Transaction>> LoadNewTransactionFile(string file)
-        {
-            //make sure file exists
-            if (File.Exists(file))
-                try
-                {
-                    var t = await TransactionManager.ParseTransactions_CSV(file);
-                    return t;
-                }
-                catch (Exception ex)
-                {
-                    return null;
-                }
-            else
-                throw new Exception("File doesnt exist");
-                
-        }
-        public async Task SaveTransactions(IEnumerable<Transaction> transactions)
-        {
-            try
-            {
-                //todo: api return types
-                await TransactionManager.SaveTransactions(transactions);
-            }
-            catch(Exception ex)
-            {
-                Console.Error.WriteLine(ex.Message);
-            }
-        }
-        public IEnumerable<Transaction> GetLastSavedTransactions()
-        {
-            return TransactionManager.GetLastSaved();
-        }
-        public IEnumerable<Transaction> LoadTransactionFiles(string[] files) { throw new NotImplementedException(); }
-        //todo: replace hard code look for uber eats lol
-        public IEnumerable<Transaction> Search_DateRange(TransactionQuery query)
-        {
-            return TransactionManager.TransactionQuery(query);
-        }
-        public IEnumerable<Transaction> GetIncomming() { throw new NotImplementedException(); }
-        public IEnumerable<Transaction> GetReduceTargets() { throw new NotImplementedException(); }
-        public IEnumerable<Transaction> GetSummary() { throw new NotImplementedException(); }
-        public IEnumerable<Transaction> GetCategory(string category) { throw new NotImplementedException(); }
-        //todo: Category query class?
-        public IEnumerable<CategoryDefinition>GetCategories() 
-        {
-            return DefinitionsManager.GetCategories();
-        }
-        //todo: clean query system 
-        public IEnumerable<TransactionDefinition>GetTransactionsDefs()
-        {
-            return DefinitionsManager.GetTransactionDefinitions();
-        }
-        public int GetLoadedTransactionCount()
-        {
-            return TransactionManager.GetActiveCount();
-        }
-        public bool CreateCategoryDefinition(CategoryDefinition def)
-        {
-            return true;
-        }
-        public bool CreateTrasactionDefinition()
-        {
-            return true;
-        }
-        #endregion
-
         //'api' end points are where we could add input checks if it becomes necessary
-        #region api2
+        #region api
+        //no idea if this is a bad design or not...but less try catch for me
         public async Task<IBankerResult> CreateCategoryDefinition(ICategoryDefinition category)
         {
-            try
-            {
-                await Task.Yield();
-                var cat = new CategoryDefinition()
-                {
-                    AssignedId = Guid.NewGuid(),
-                    CategoryType = category.Name,
-                    SubTypes = category.Tags,
-                    ColorHex = category.Color,
-                    ReductionTarget = category.ReductionTarget
-                };
-                DefinitionsManager.CreateCategory(cat);
-                return GenerateResult();
-            }
-            catch (Exception ex)
-            {
-                return GenerateResult(false, "implement custom exceptions");
-            }
+            await Task.Yield(); //quick action, wait until awaited
+            return RunAction<ICategoryDefinition,Task>(DefinitionsManager.CreateCategory,category);
         }
         public async Task<IBankerResult> GetCategoryDefinition(string categoryName)
         {
-            var category = DefinitionsManager.GetCategory(categoryName);
             await Task.Yield();
-            return GenerateResult(value: category);
+            return RunAction(DefinitionsManager.GetCategory,categoryName);
         }
         public async Task<IBankerResult> ModifyCategory(ICategoryDefinition category)
         {
-            try
-            {
-                return GenerateResult(false, "implement custom exceptions");
-            }
-            catch(Exception ex)
-            {
-                return GenerateResult(false, "implement custom exceptions");
-            }
+            await Task.Yield();
+            return RunAction(DefinitionsManager.ModifyCategory, category);
         }
-        public async Task<IBankerResult> TagTransaction(ITransactionDefinition transcation, string tag) 
+        public async Task<IBankerResult> DeleteCategory(ICategoryDefinition category)
         {
-            try
-            {
-                return GenerateResult(false, "implement custom exceptions");
-            }
-            catch (Exception ex)
-            {
-                return GenerateResult(false, "implement custom exceptions");
-            }
-        }
-        public async Task<IBankerResult> SetTransactionConditional(ITransactionDefinition transcation, string tag)
-        {
-            //not really sure what this even is yet
-            try
-            {
-                return GenerateResult(false, "implement custom exceptions");
-            }
-            catch (Exception ex)
-            {
-                return GenerateResult(false, "implement custom exceptions");
-            }
+            await Task.Yield();
+            return RunAction(DefinitionsManager.DeleteCategory,category);
         }
         public async Task<IBankerResult> QueryTransactions(ITransactionQuery query) 
         {
@@ -165,6 +58,8 @@ namespace Banker
         {
             throw new NotImplementedException();
         }
+        #endregion
+        #region helpers
         private IBankerResult GenerateResult(bool success = true, 
             string msg = "",List<object>? coll = null, 
             object? value = null)
@@ -178,8 +73,64 @@ namespace Banker
             };
             return result;
         }
+        //I really dont want to do a million try/catch in api
+        private IBankerResult RunAction<T1,T2>(Func<T1,T2> toDo,T1 input)
+        {
+            try
+            {
+                var result = toDo.Invoke(input);
+                return ProduceResult(result);
+            }
+            catch (Exception ex)
+            {
+                var result = new BankerResult
+                {
+                    IsSuccess = false,
+                    ErrorMessage = ex.Message,
+                    _dynamicCollection = null,
+                    _dynamicObject = null
+                };
+                return result;
+            }
+        }
+        private async Task<IBankerResult> RunActionAsync<T1,T2>(Func<T1,Task<T2>>toDo,T1 input)
+        {
+            try
+            {
+                var result = await toDo.Invoke(input);
+                return ProduceResult(result);
+            }
+            catch (Exception ex)
+            {
+                var result = new BankerResult
+                {
+                    IsSuccess = false,
+                    ErrorMessage = ex.Message,
+                    _dynamicCollection = null,
+                    _dynamicObject = null
+                };
+                return result;
+            }
+        }
+        private IBankerResult ProduceResult<T>(T value)
+        {
+            if (value is T)
+            {
+                //is it a collection? 
+                if (typeof(IEnumerable).IsAssignableFrom(typeof(T)))
+                {
+                    var obj = (IEnumerable)value;
+                    obj.Cast<object>().ToList();
+                    return GenerateResult(true, String.Empty, obj.Cast<object>().ToList(), null);
+                }
+                else
+                {
+                    return GenerateResult(true, String.Empty, null, value);
+                }
+            }
+            throw new Exception("Expected results did not align with actual results");
+        }
         #endregion
-
 
         //load the configuration files
         #region init
@@ -195,14 +146,6 @@ namespace Banker
                 + "\\smortFinance";
             DefinitionsManager = await DefinitionsManager.DefinitionsManagerFactory(location);
             TransactionManager = await TransactionManager.TransactionManagerFactory(location);
-        }
-        private async Task LoadTransactionCategories(string root)
-        {
-
-        }
-        private async Task LoadTransactionDefinitions()
-        {
-
         }
         #endregion
     }

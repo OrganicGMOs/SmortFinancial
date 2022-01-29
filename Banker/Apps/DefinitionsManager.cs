@@ -1,4 +1,6 @@
-﻿using Banker.Models;
+﻿using Banker.Extensions.CustomExceptions;
+using Banker.Interfaces;
+using Banker.Models;
 using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
@@ -20,97 +22,51 @@ namespace Banker.Apps
         private const string CATEGORYURL = "https://raw.githubusercontent.com/OrganicGMOs/SmortFinancial/main/Definitions/Categories.json";
         private const string TRANSACTIONURL = "https://raw.githubusercontent.com/OrganicGMOs/SmortFinancial/main/Definitions/Transactions.json";
 
-        #region CRUD
-        internal bool CreateDefinition(TransactionDefinition def) 
+        //Data validation should/will be at BankerInstnace
+        #region Crud
+        internal Task CreateCategory(ICategoryDefinition category)
         {
-            if (CheckForDuplicateDefinition(def))
-                UpdateCollections(def);
-            else
-                return false;
-            return true;
+            //make sure it doesnt exist
+            var current = _categoryDefs.Where(p => p.CategoryType == category.Name)
+                .FirstOrDefault();
+            if (current != null)
+                throw new InvalidDataException("Category already exists");
+            UpdateCollections(new CategoryDefinition
+            {
+                AssignedId = Guid.NewGuid(),
+                CategoryType = category.Name,
+                SubTypes = category.SubCategories,
+                ColorHex = category.Color,
+                ReductionTarget = category.ReductionTarget,
+            });
+            return Task.CompletedTask;
         }
-        internal bool CreateCategory(CategoryDefinition category) 
+        internal Task ModifyCategory(ICategoryDefinition category)
         {
-            if (!CheckForDuplicateDefinition(category))
-                UpdateCollections(category);
-            else
-                return false;
-            return true;
-
-        }
-        internal bool UpdateDefinition(TransactionDefinition trans) 
-        {
-            var item = GetSingleDefinition(trans);
+            var item = GetCategoryById(category.CategoryId);
             if (item == null)
-                return false;
+                throw new CategoryNotFoundException();
             else
             {
-                item.ReductionTarget = trans.ReductionTarget;
-                item.MappedCategory = trans.MappedCategory;
-                return true;
-            }            
-        }
-        internal bool UpdateCategory(CategoryDefinition cat) 
-        {
-            var item = GetSingleDefinition(cat);
-            if (item == null)
-                return false;
-            else
-            {
-                item.SubTypes = cat.SubTypes;
-                item.ReductionTarget = cat.ReductionTarget;
-                item.CategoryType = cat.CategoryType;
-                item.ColorHex = cat.ColorHex;
-                item.ReductionTarget = cat.ReductionTarget;
-                return true;
+                item.SubTypes = category.SubCategories;
+                item.ReductionTarget = category.ReductionTarget;
+                item.CategoryType = category.Name;
+                item.ColorHex = category.Color;
+                item.ReductionTarget = category.ReductionTarget;
             }
+            return Task.CompletedTask;
         }
-        internal bool DeleteDefinition(TransactionDefinition def) 
+        internal Task DeleteCategory(ICategoryDefinition category)
         {
-            if (CheckForDuplicateDefinition(def))
-                UpdateCollections(def, false);
-            else
-                return false;
-            return true;
-        }
-        internal bool DeleteCategory(CategoryDefinition cat) 
-        {
-            if (CheckForDuplicateDefinition(cat))
-                UpdateCollections(cat, false);
-            else
-                return false;
-            return true;
-        }
-        /// <summary>
-        /// gets a described transaction defintion if it exists. <br/>
-        /// returns default transaction if item does not exist
-        /// </summary>
-        /// <param name="key">key value of transaction</param>
-        /// <returns>TransactionDefition with inputted key</returns>
-        internal TransactionDefinition GetDefinition(string key)
-        {
-            var item = _transactionDefs.Where(p => p.Key == key)
-                .FirstOrDefault();
+            var item = GetCategoryById(category.CategoryId);
             if (item == null)
-                return new TransactionDefinition();
-            return item;
+                throw new CategoryNotFoundException();
+            else
+                UpdateCollections(item,false);
+            return Task.CompletedTask;
         }
-        internal CategoryDefinition GetCategory(string key)
-        {
-            var item = _categoryDefs.Where(p => p.CategoryType == key)
-                .FirstOrDefault();
-            if(item == null)
-                return new CategoryDefinition();
-            return item;
-        }
-        internal IEnumerable<TransactionDefinition> GetTransactionDefinitions() 
-        {
-            return _transactionDefs.ToList();
-        }
-        internal IEnumerable<CategoryDefinition> GetCategories() 
-        {
-            return _categoryDefs.ToList();
-        }
+        #endregion
+        #region Helpers
         private bool CheckForDuplicateDefinition(TransactionDefinition def)
         {
             var exist = _transactionDefs.Where(p => p.Key == def.Key)
@@ -120,9 +76,9 @@ namespace Banker.Apps
             else
                 return true;
         }
-        private bool CheckForDuplicateDefinition(CategoryDefinition def)
+        private bool CheckForDuplicateDefinition(string key)
         {
-            var exist = _categoryDefs.Where(p => p.CategoryType == def.CategoryType)
+            var exist = _categoryDefs.Where(p => p.CategoryType == key)
              .FirstOrDefault();
             if (exist == null)
                 return false;
@@ -130,7 +86,7 @@ namespace Banker.Apps
                 return true;
         }
         //add to the two collections. maybe we shouldnt split them? saving is easier though
-            //marks serialize object as needing to re-write
+        //marks serialize object as needing to re-write
         private void UpdateCollections(TransactionDefinition def, bool add = true)
         {
             if (add)
@@ -143,7 +99,7 @@ namespace Banker.Apps
                 _transactionDefs.Remove(def);
                 _userTransactionDefinitions.Definitions.Remove(def);
             }
-            
+
             _userTransactionDefinitions.NeedsWrite = true;
         }
         private void UpdateCollections(CategoryDefinition def, bool add = true)
@@ -160,14 +116,20 @@ namespace Banker.Apps
             }
             _userCategoryDefinitions.NeedsWrite = true;
         }
-        private TransactionDefinition? GetSingleDefinition(TransactionDefinition def) {
-            var item = _transactionDefs.Where(p => p.AssignedId == def.AssignedId)
+        internal CategoryDefinition? GetCategory(string key)
+        {
+            var item = _categoryDefs.Where(p => p.CategoryType == key)
                 .FirstOrDefault();
+            if (item == null)
+                return new CategoryDefinition();
             return item;
         }
-        private CategoryDefinition GetSingleDefinition(CategoryDefinition df) { throw new NotImplementedException(); }
+        internal CategoryDefinition? GetCategoryById(Guid id)
+        {
+            return _categoryDefs.Where(p => p.AssignedId == id)
+                .FirstOrDefault();
+        }
         #endregion
-
         #region Document Saving
         /// <summary>
         /// At application close if defintions have been modified we need
@@ -200,7 +162,7 @@ namespace Banker.Apps
         private async Task SaveDefintion<T>(T def, string path)
         {
             var json = JsonConvert.SerializeObject(def);
-            await Extensions.WriteFile(json, path);
+            await Extensions.Functions.WriteFile(json, path);
         }
         #endregion
 
@@ -275,7 +237,7 @@ namespace Banker.Apps
             {
                 var json = JsonConvert
                     .SerializeObject(_defaultCategoryDefinitions, Formatting.Indented);
-                await Extensions.WriteFile(file, json);
+                await Extensions.Functions.WriteFile(file, json);
             }
         }
         private async Task LoadDefaultTransactionDefinitions(string file)
@@ -307,7 +269,7 @@ namespace Banker.Apps
             {
                 var json = JsonConvert
                     .SerializeObject(_defaultTransactionDefinitions, Formatting.Indented);
-                await Extensions.WriteFile(file, json);
+                await Extensions.Functions.WriteFile(file, json);
             }    
         }
         private async Task LoadUserDefinitions() 
@@ -347,7 +309,7 @@ namespace Banker.Apps
         {
             try
             {
-                var json = await Extensions.ReadFile(file);
+                var json = await Extensions.Functions.ReadFile(file);
                 if(json == null)
                     return default(T);
                 if(string.IsNullOrEmpty(json))

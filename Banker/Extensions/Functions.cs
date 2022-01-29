@@ -1,13 +1,12 @@
-﻿using Newtonsoft.Json;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Banker
+namespace Banker.Extensions
 {
-    internal static class Extensions
+    internal static class Functions
     {
         public static async Task WriteFile(string path, string content)
         {
@@ -48,7 +47,7 @@ namespace Banker
                 }
                 else
                     return null;
-                
+
             }
             catch (Exception ex)
             {

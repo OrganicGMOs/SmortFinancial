@@ -8,8 +8,9 @@ namespace Banker.Interfaces
 {
     public interface ICategoryDefinition
     {
+        public Guid CategoryId { get; set; }
         public string Name { get; set; }
-        public string[] Tags { get; set; }
+        public string[] SubCategories { get; set; }
         public string Color { get; set; }
         public bool ReductionTarget { get; set; }
     }
