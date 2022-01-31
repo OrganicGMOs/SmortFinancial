@@ -64,6 +64,10 @@ namespace Banker.Apps
                 UpdateCollections(item,false);
             return Task.CompletedTask;
         }
+        internal Task<IEnumerable<CategoryDefinition>> GetCategoryDefinitions()
+        {
+            return Task.FromResult(_categoryDefs.AsEnumerable());
+        }
 
         internal Task CreateTransaction(ITransactionDefinition transaction)
         {
@@ -109,6 +113,12 @@ namespace Banker.Apps
             else
                 UpdateCollections(toDelete, false);
             return Task.CompletedTask;
+        }
+        internal Task<IEnumerable<TransactionDefinition>> GetTransactionDefinitions()
+        {
+            //calls an async method, probably not great since it just returns a collection
+            var ahh = _transactionDefs.AsEnumerable();
+            return Task.FromResult(_transactionDefs.AsEnumerable());
         }
         #endregion
         #region Helpers

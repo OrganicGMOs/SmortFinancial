@@ -13,6 +13,7 @@ namespace Banker.Apps
     //sure the files get updated at the end
     internal class TransactionManager
     {
+        private BankerInstance Banker;
         private TransactionHistory LoadedTransactions;
         private IEnumerable<Transaction> PendingSave;
         private IEnumerable<Transaction> _lastSaved;
@@ -23,7 +24,7 @@ namespace Banker.Apps
         private DateTime OldestTransaction;
         private DateTime _today;
 
-        internal TransactionManager(string root)
+        internal TransactionManager(string root, BankerInstance banker)
         {
             _root = root;
             _transactionDir = root + "\\transactions";
@@ -33,6 +34,7 @@ namespace Banker.Apps
                 //auto archives 
             _today = DateTime.Now;
             _lastSaved = new List<Transaction>();
+            Banker = banker;
         }
         private Transaction ParseImportTransaction(string[] values) 
         {
@@ -42,6 +44,7 @@ namespace Banker.Apps
                 float value;
                 var debit = values[3];
                 var credit = values[4];
+                var transactionType = BankerInstance.DefinitionsManager.GetTransaction(values[2]);
                 if (string.IsNullOrWhiteSpace(debit))
                 {
                     outgoing = false;
@@ -58,8 +61,7 @@ namespace Banker.Apps
                     AssignedId = Guid.NewGuid(), //we are loading a new transaction here, give it an ID
                     Description = values[2],
                     IsDebit = outgoing,
-                    TransactionType = BankerInstance.DefinitionsManager
-                    .GetDefinition(values[2]),
+                    TransactionType = transactionType != null ? transactionType : new TransactionDefinition(),
                     Value = value
                 };
             }
@@ -93,9 +95,12 @@ namespace Banker.Apps
             LoadedTransactions.Transactions.AddRange(transactions);
             return transactions;
         }
-        public IEnumerable<Transaction>GetTransactions(TransactionQuery query)
+        public Transaction? GetTransaction(ITransaction transaction)
         {
-            throw new NotImplementedException();
+            var item = LoadedTransactions.Transactions
+                .Where(p => p.AssignedId == transaction.AssignedId)
+                .FirstOrDefault();
+            return item;
         }
         internal int GetActiveCount()
         {
@@ -217,12 +222,12 @@ namespace Banker.Apps
                     return a.Date.CompareTo(b.Date);
                 });
                 var json = JsonConvert.SerializeObject(history, Formatting.Indented);
-                await Extensions.WriteFile(history.FilePath, json);
+                await Extensions.Functions.WriteFile(history.FilePath, json);
             }
         }
         private async Task<TransactionHistory> GetOrCreateHistory(string path)
         {
-            var json = await Extensions.ReadFile(path);
+            var json = await Extensions.Functions.ReadFile(path);
             TransactionHistory? history;
             if (json == null)
                 history = StartHistory(path, true); //file dont exist
@@ -365,10 +370,77 @@ namespace Banker.Apps
                 p.Tags.Union(tags).Count() > 0);
             }
         }
-        #region Initialization
-        public static async Task<TransactionManager> TransactionManagerFactory(string root)
+        #region SearchQuery two
+        //lots of linq queries, a foreach is probably better
+            //broken since JSON models need updating. ignoring until csv parsing v2
+        internal IEnumerable<Transaction> QueryTransactions(ITransactionQuery query)
         {
-            var manager = new TransactionManager(root);
+            var matches = new List<Transaction>();
+            var records = LoadedTransactions.Transactions.ToArray();
+            foreach (var r in records)
+            {
+                if(DateCheck(r,query.NotBefore,query.NotAfter))
+                    if(PriceCheck(r,query.Min,query.Max))
+                        if(CheckMembership<Guid>(r.TransactionType.AssignedId,query.TransactionIds))
+                            if(CheckMembership<Guid>(r.Category.CategoryId,query.CategoryIds))
+                                if(CheckMembership<string>(r.Category.Subtype,query.SubCategory))
+                                    if(TagCheck(r,query.Tags))
+                                        matches.Add(r);
+            }
+            return matches;
+        }
+        private bool DateCheck(Transaction record, DateTime? start, DateTime? end)
+        {
+            if (start == null && end == null) //get everything
+                return true;
+            else
+            {
+                if (start == null)
+                    return record.Date <= end;
+                else if (end == null)
+                    return record.Date >= start;
+                else
+                    return record.Date >= start && record.Date <= end;
+            }
+        }
+        private bool PriceCheck(Transaction record, float? min, float? max)
+        {
+            if(min == null && max == null)
+                return true;
+            else
+            {
+                if (min == null)
+                    return record.Value <= max;
+                else if (max == null)
+                    return record.Value >= min;
+                else
+                    return record.Value <= max && record.Value >= min;
+            }
+        }
+        private bool CheckMembership<T>(T value, IEnumerable<T>? collection)
+        {
+            if (collection == null)
+                return true;
+            else
+                return collection.Contains(value);
+        }
+        private bool TagCheck(Transaction record, IEnumerable<string>? tags)
+        {
+            if (tags == null)
+                return true;
+            else
+            {
+                foreach (var tag in record.Tags)
+                    if (tags.Contains(tag))
+                        return true;
+            }
+            return false;
+        }
+        #endregion
+        #region Initialization
+        public static async Task<TransactionManager> TransactionManagerFactory(string root, BankerInstance banker)
+        {
+            var manager = new TransactionManager(root,banker);
             await manager.initialize();
             return manager;
         }
