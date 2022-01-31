@@ -78,6 +78,11 @@ namespace Banker
         }
         #endregion
         #region Transactions
+        public async Task<IBankerResult> ParseTransactionCSV(ICSVDefinition definition)
+        {
+            var result = await RunActionAsync(TransactionManager.ParseTransactionCSV, definition);
+            return result;
+        }
         public async Task<IBankerResult> GetTransaction(ITransaction transaction) 
         {
             await Task.Yield();

@@ -36,6 +36,68 @@ namespace Banker.Apps
             _lastSaved = new List<Transaction>();
             Banker = banker;
         }
+
+        #region CSVParsing
+        internal async Task<IEnumerable<Transaction>> ParseTransactionCSV(ICSVDefinition definition)
+        {
+            var reader = new StreamReader(definition.FilePath);
+            var text = await reader.ReadToEndAsync();
+            var transactions = ParseCSVString(definition, text);
+            return transactions;
+        }
+        internal IEnumerable<Transaction> ParseCSVString(ICSVDefinition definition,string value)
+        {
+            var transactions = new List<Transaction>();
+            var lines = value.Split(definition.LineDelimiter).ToList();
+            //is the last line item blank?
+            if (definition.HeaderPresent)
+                lines.RemoveAt(0);
+            foreach (var line in lines)
+            {
+                if (string.IsNullOrEmpty(line))
+                    break;
+                var columns = line.Split(definition.ColumnDelimiter);
+                transactions.Add(ParseCSVLine(columns,definition));
+            }
+            LoadedTransactions.Transactions.AddRange(transactions);
+            return transactions;
+        }
+        internal Transaction ParseCSVLine(string[] data, ICSVDefinition defintion)
+        {
+            bool outgoing;
+            float value;
+            var debit = data[defintion.DebitColumn-1];
+            var credit = data[defintion.CreditColumn-1];
+            var description = data[defintion.DescriptionColumn-1];
+            var transactionType = BankerInstance.DefinitionsManager
+                .GetTransaction(description);
+            if (transactionType == null)
+                transactionType = new TransactionDefinition();
+            var category = BankerInstance.DefinitionsManager
+                .GetSlimCategory(transactionType);
+            if (string.IsNullOrWhiteSpace(debit))
+            {
+                outgoing = false;
+                value = float.Parse(credit);
+            }
+            else
+            {
+                outgoing = true;
+                value = float.Parse(debit);
+            }
+            return new Transaction
+            {
+                Date = DateTime.Parse(data[defintion.DateColumn -1]),
+                AssignedId = Guid.NewGuid(), //we are loading a new transaction here, give it an ID
+                Description = description,
+                IsDebit = outgoing,
+                TransactionType = transactionType,
+                Category = category,
+                Tags = transactionType.DefaultTags,
+                Value = value
+            };
+        }
+        #endregion
         private Transaction ParseImportTransaction(string[] values) 
         {
             try

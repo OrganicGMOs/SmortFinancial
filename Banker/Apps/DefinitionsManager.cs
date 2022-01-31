@@ -64,6 +64,31 @@ namespace Banker.Apps
                 UpdateCollections(item,false);
             return Task.CompletedTask;
         }
+
+        internal TransactionCategory GetSlimCategory(TransactionDefinition? transactionType)
+        {
+            if (transactionType == null)
+                return new TransactionCategory();
+            else
+            {
+                var category = _categoryDefs
+                    .Where(p => p.AssignedId == transactionType.AssignedId).FirstOrDefault();
+                if (category == null)
+                    return new TransactionCategory();
+                else
+                {
+                    return new TransactionCategory
+                    {
+                        CategoryId = category.AssignedId,
+                        Subtype = category.SubTypes[0],
+                        CategoryType = category.CategoryType,
+                        Color = Convert.ToInt32(category.ColorHex, 16),
+                        ReductionTarget = category.ReductionTarget
+                    };
+                }
+            }
+        }
+
         internal Task<IEnumerable<CategoryDefinition>> GetCategoryDefinitions()
         {
             return Task.FromResult(_categoryDefs.AsEnumerable());
