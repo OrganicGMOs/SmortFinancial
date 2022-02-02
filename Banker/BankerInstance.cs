@@ -92,7 +92,11 @@ namespace Banker
         {
             var result = await RunActionAsync(TransactionManager.ProcessQuery, query);
             return result;
-            
+        }
+        public async Task<IBankerResult> SaveTransactions(IEnumerable<ITransaction> transactions)
+        {
+            var result = await RunActionAsync(TransactionManager.SaveTransactions, transactions);
+            return result;
         }
         public async Task<IBankerResult> QueryTransactions2(ITransactionQuery query)
         {
@@ -164,6 +168,7 @@ namespace Banker
             }
             catch (Exception ex)
             {
+                Console.WriteLine(ex.Message);
                 return ProduceErrorResult(ex);
             }
         }

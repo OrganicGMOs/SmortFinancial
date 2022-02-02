@@ -14,6 +14,7 @@ namespace Banker.Interfaces
     /// </summary>
     public interface ITransactionCategory
     {
+        public Guid CategoryId { get; set; }
         public string CategoryType { get; set; }
         public string Subtype { get; set; }
         public int Color { get; set; }

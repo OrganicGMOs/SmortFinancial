@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Banker.Interfaces;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -23,7 +24,7 @@ namespace Banker.Models
         public bool NeedsWrite { get; set; }
         public DateTime Modified { get; set; }
         public DateTime OldestRecord { get; set; }
-        public List<Transaction> Transactions { get; set; }
+        public List<ITransaction> Transactions { get; set; }
     }
     public class CategoryDefinitions
     {

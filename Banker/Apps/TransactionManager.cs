@@ -1,4 +1,5 @@
-﻿using Banker.Interfaces;
+﻿using Banker.Extensions.CustomExceptions;
+using Banker.Interfaces;
 using Banker.Models;
 using Newtonsoft.Json;
 using System;
@@ -15,8 +16,10 @@ namespace Banker.Apps
     {
         private BankerInstance Banker;
         private TransactionHistory LoadedTransactions;
-        private IEnumerable<Transaction> PendingSave;
-        private IEnumerable<Transaction> _lastSaved;
+        private IEnumerable<ITransaction> PendingSave;
+        private IEnumerable<ITransaction> _lastSaved;
+        //not used yet, might be easier instead of TransactionHistory
+        private IEnumerable<ITransaction> Loaded;
         private string _root;
         private string _transactionDir;
         private string _archive;
@@ -38,29 +41,57 @@ namespace Banker.Apps
         }
 
         #region CSVParsing
-        internal async Task<IEnumerable<Transaction>> ParseTransactionCSV(ICSVDefinition definition)
+        internal async Task<ITransactionParseResult> ParseTransactionCSV(ICSVDefinition definition)
         {
             var reader = new StreamReader(definition.FilePath);
             var text = await reader.ReadToEndAsync();
             var transactions = ParseCSVString(definition, text);
             return transactions;
         }
-        internal IEnumerable<Transaction> ParseCSVString(ICSVDefinition definition,string value)
+        internal ITransactionParseResult ParseCSVString(ICSVDefinition definition,string value)
         {
             var transactions = new List<Transaction>();
+            var duplicates = new List<Transaction>();
+            var archive = new List<Transaction>();
+            var failed = new List<string>();
             var lines = value.Split(definition.LineDelimiter).ToList();
             //is the last line item blank?
             if (definition.HeaderPresent)
                 lines.RemoveAt(0);
             foreach (var line in lines)
             {
-                if (string.IsNullOrEmpty(line))
+                if (string.IsNullOrWhiteSpace(line.Replace(definition.ColumnDelimiter, ' ')))
                     break;
-                var columns = line.Split(definition.ColumnDelimiter);
-                transactions.Add(ParseCSVLine(columns,definition));
+                else
+                {
+                    Transaction? transaction = null;
+                    try
+                    {
+                        var columns = line.Split(definition.ColumnDelimiter);
+                        transaction = ParseCSVLine(columns, definition);
+                    }
+                    catch(Exception ex)
+                    {
+                        failed.Add(line);
+                        //failed parsing
+                    }
+                    if(transaction != null)
+                    {
+                        transactions.Add(transaction);
+                        if (CheckForDuplicate(transaction, LoadedTransactions.Transactions))
+                            duplicates.Add(transaction);
+                        else if (CheckForArchiveItem(transaction, LoadedTransactions.Modified))
+                            archive.Add(transaction);
+                    }
+                }
             }
-            LoadedTransactions.Transactions.AddRange(transactions);
-            return transactions;
+            
+            return new TransactionParseResult
+            {
+                ArchiveItem = archive,
+                Duplicate = duplicates,
+                Loaded = transactions
+            };
         }
         internal Transaction ParseCSVLine(string[] data, ICSVDefinition defintion)
         {
@@ -98,66 +129,7 @@ namespace Banker.Apps
             };
         }
         #endregion
-        private Transaction ParseImportTransaction(string[] values) 
-        {
-            try
-            {
-                bool outgoing;
-                float value;
-                var debit = values[3];
-                var credit = values[4];
-                var transactionType = BankerInstance.DefinitionsManager.GetTransaction(values[2]);
-                if (string.IsNullOrWhiteSpace(debit))
-                {
-                    outgoing = false;
-                    value = float.Parse(credit);
-                }
-                else
-                {
-                    outgoing = true;
-                    value = float.Parse(debit);
-                }
-                return new Transaction
-                {
-                    Date = DateTime.Parse(values[0]),
-                    AssignedId = Guid.NewGuid(), //we are loading a new transaction here, give it an ID
-                    Description = values[2],
-                    IsDebit = outgoing,
-                    TransactionType = transactionType != null ? transactionType : new TransactionDefinition(),
-                    Value = value
-                };
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine(ex.Message);
-                return new Transaction();
-            }
-        }
-        public async Task<IEnumerable<Transaction>> ParseTransactions_CSV(string file)
-        {
-            
-            var reader = new StreamReader(file);
-            var transactions = new List<Transaction>();
-            var text = (await reader.ReadToEndAsync())
-                .Replace("\"", String.Empty);
-            var lines = text.Split('\n');
-            var lineValues = lines.Select(x => x.Split(',')).ToList();
-            lineValues.RemoveAt(lineValues.Count - 1);
-            lineValues.RemoveAt(0);
-            reader.Dispose();
-            foreach (var set in lineValues)
-            {
-                var transaction = ParseImportTransaction(set);
-                if (!CheckForDuplicate(transaction, LoadedTransactions.Transactions))
-                    transactions.Add(ParseImportTransaction(set));
-                else
-                    Console.WriteLine("Duplicate");
-            }
-                
-            LoadedTransactions.Transactions.AddRange(transactions);
-            return transactions;
-        }
-        public Transaction? GetTransaction(ITransaction transaction)
+        public ITransaction? GetTransaction(ITransaction transaction)
         {
             var item = LoadedTransactions.Transactions
                 .Where(p => p.AssignedId == transaction.AssignedId)
@@ -168,11 +140,11 @@ namespace Banker.Apps
         {
             return LoadedTransactions.Transactions.Count();
         }
-        public IEnumerable<Transaction> GetLastSaved()
+        public IEnumerable<ITransaction> GetLastSaved()
         {
             return _lastSaved;
         }
-        private IEnumerable<Transaction>GetTransactions_TimeSpan(DateTime? start, DateTime? end)
+        private IEnumerable<ITransaction>GetTransactions_TimeSpan(DateTime? start, DateTime? end)
         {
             if (start == null && end == null)
             {
@@ -190,36 +162,26 @@ namespace Banker.Apps
                     .ToList();
             }
         }
-        internal async Task SaveTransactions(IEnumerable<Transaction> transactions)
+        internal async Task<IEnumerable<string>> SaveTransactions(IEnumerable<ITransaction> transactions)
         {
             var valid = transactions.Where(p => p != null);
             //not called automatically by ParseTransactions_CSV(), "up to user to save"
             if (valid.Count() <= 0)
-            {
-                //todo: exception and logging
-                return;
-            }
+                throw new FileSaveException("Invalid input");
             else
             {
-                await UpdateSavedTransactions(valid);
+                var files = await UpdateSavedTransactions(valid);
                 _lastSaved = valid;
+                return files;
             }
         }
-        internal IEnumerable<Transaction> TransactionQuery(TransactionQuery query)
-        {
-            //todo
-            return null;
-        }
-        internal void AssignTransactionDefinition(Guid id, TransactionDefinition definition)
-        {
-            
-        }
+ 
         #region FileMangement
         private async Task LoadTransactionHistory()
         {
             LoadedTransactions = await GetOrCreateHistory(_history);
         }
-        private async Task UpdateSavedTransactions(IEnumerable<Transaction> transactions)
+        private async Task<IEnumerable<string>> UpdateSavedTransactions(IEnumerable<ITransaction> transactions)
         {
             //determine which file the transactions fall under
             var fileNames = FindFileLocations(transactions);
@@ -227,10 +189,11 @@ namespace Banker.Apps
             foreach(var file in fileNames)
                 updateTasks.Add(UpdateFile(file.Key, file.Value));
             await Task.WhenAll(updateTasks);
+            return fileNames.Keys.ToList();
         }
-        private Dictionary<string,List<Transaction>> FindFileLocations(IEnumerable<Transaction> transactions)
+        private Dictionary<string,List<ITransaction>> FindFileLocations(IEnumerable<ITransaction> transactions)
         {
-            var dict = new Dictionary<string, List<Transaction>>();
+            var dict = new Dictionary<string, List<ITransaction>>();
             foreach (var transaction in transactions.OrderBy(p => p.Date))
             {
                 var age = _today.Subtract(transaction.Date).TotalDays;
@@ -242,50 +205,35 @@ namespace Banker.Apps
             }
             return dict;
         }
-        private void UpdateOrCreateDictionaryValue(Dictionary<string,List<Transaction>> dict,string key,Transaction transaction)
+        private void UpdateOrCreateDictionaryValue(Dictionary<string,List<ITransaction>> dict,string key,ITransaction transaction)
         {
             if(dict.ContainsKey(key))
                 dict[key].Add(transaction);
             else
             {
-                var list = new List<Transaction>();
+                var list = new List<ITransaction>();
                 dict.Add(key, list);
                 list.Add(transaction);
             }
         }
-        private async Task UpdateFile(string file,IEnumerable<Transaction> transactions)
+        private async Task UpdateFile(string file,IEnumerable<ITransaction> transactions)
         {
-            int duplicatCount = 0;
             //todo: file size / compression
             var history = await GetOrCreateHistory(file);
             if (history.Transactions.Count > 0)
             {
+                //dont care about duplicates here, user should have been notified after parsing
                 foreach (var t in transactions)
-                {
-                    if(CheckForDuplicate(t,history.Transactions))
-                    {
-                        //todo: let users have ultimate say if something is "duplicate"
-                        Console.WriteLine("Duplicate item, count: " + ++duplicatCount);
-                    }
-                    else
-                    {
-                        //changes made, commit them
-                        history.NeedsWrite = true;
-                        history.Transactions.Add(t);
-                    }
-                }
+                    history.Transactions.Add(t);
             }
             else
                 history.Transactions = transactions.ToList();
-            if (history.NeedsWrite)
+            history.Transactions.Sort((a, b) =>
             {
-                history.Transactions.Sort((a, b) =>
-                {
-                    return a.Date.CompareTo(b.Date);
-                });
-                var json = JsonConvert.SerializeObject(history, Formatting.Indented);
-                await Extensions.Functions.WriteFile(history.FilePath, json);
-            }
+                return a.Date.CompareTo(b.Date);
+            });
+            var json = JsonConvert.SerializeObject(history, Formatting.Indented);
+            await Extensions.Functions.WriteFile(history.FilePath, json);
         }
         private async Task<TransactionHistory> GetOrCreateHistory(string path)
         {
@@ -309,11 +257,11 @@ namespace Banker.Apps
                 FilePath = path,
                 NeedsWrite = needsCreation,
                 Modified = DateTime.Now,
-                Transactions = new List<Transaction>()
+                Transactions = new List<ITransaction>()
             };
         }
         #endregion
-        private bool CheckForDuplicate(Transaction transaction, IEnumerable<Transaction> transactions)
+        private bool CheckForDuplicate(ITransaction transaction, IEnumerable<ITransaction> transactions)
         {
             var match = transactions.Where(p =>
             {
@@ -330,23 +278,29 @@ namespace Banker.Apps
             else
                 return false;
         }
+        private bool CheckForArchiveItem(Transaction transaction, DateTime refrencePoint)
+        {
+            if (refrencePoint.Subtract(transaction.Date).TotalDays > 365)
+                return true;
+            else return false;
+        }
         //probably a much better way to do this
         internal async Task<IEnumerable<Transaction>> ProcessQuery(ITransactionQuery query)
         {
             await Task.Yield();
             //lol kinda fun to write that. main filter
-            var transactions = FilterDebitCredit(
-                PriceFilter(
-                    QueryDates(
-                        query.NotBefore,query.NotAfter),
-                    query.Min,query.Max),query.DebitOnly,query.CreditOnly);
-            transactions = FilterTransactionDefinitions(transactions,query.TransactionIds);
-            transactions = FilterCategoryDefinitions(transactions,query.CategoryIds);
-            transactions = FilterSubCategories(transactions, query.SubCategory);
-            transactions = FilterTags(transactions, query.Tags);
-            return transactions;
+            //var transactions = FilterDebitCredit(
+            //    PriceFilter(
+            //        QueryDates(
+            //            query.NotBefore,query.NotAfter),
+            //        query.Min,query.Max),query.DebitOnly,query.CreditOnly);
+            //transactions = FilterTransactionDefinitions(transactions,query.TransactionIds);
+            //transactions = FilterCategoryDefinitions(transactions,query.CategoryIds);
+            //transactions = FilterSubCategories(transactions, query.SubCategory);
+            //transactions = FilterTags(transactions, query.Tags);
+            return new List<Transaction>();
         }
-        private IEnumerable<Transaction> QueryDates(DateTime? start, DateTime? end)
+        private IEnumerable<ITransaction> QueryDates(DateTime? start, DateTime? end)
         {
             if (start == null && end == null) //get everything
                 return LoadedTransactions.Transactions.ToList();
@@ -435,9 +389,9 @@ namespace Banker.Apps
         #region SearchQuery two
         //lots of linq queries, a foreach is probably better
             //broken since JSON models need updating. ignoring until csv parsing v2
-        internal IEnumerable<Transaction> QueryTransactions(ITransactionQuery query)
+        internal IEnumerable<ITransaction> QueryTransactions(ITransactionQuery query)
         {
-            var matches = new List<Transaction>();
+            var matches = new List<ITransaction>();
             var records = LoadedTransactions.Transactions.ToArray();
             foreach (var r in records)
             {
@@ -451,7 +405,7 @@ namespace Banker.Apps
             }
             return matches;
         }
-        private bool DateCheck(Transaction record, DateTime? start, DateTime? end)
+        private bool DateCheck(ITransaction record, DateTime? start, DateTime? end)
         {
             if (start == null && end == null) //get everything
                 return true;
@@ -465,7 +419,7 @@ namespace Banker.Apps
                     return record.Date >= start && record.Date <= end;
             }
         }
-        private bool PriceCheck(Transaction record, float? min, float? max)
+        private bool PriceCheck(ITransaction record, float? min, float? max)
         {
             if(min == null && max == null)
                 return true;
@@ -486,7 +440,7 @@ namespace Banker.Apps
             else
                 return collection.Contains(value);
         }
-        private bool TagCheck(Transaction record, IEnumerable<string>? tags)
+        private bool TagCheck(ITransaction record, IEnumerable<string>? tags)
         {
             if (tags == null)
                 return true;

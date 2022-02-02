@@ -20,4 +20,12 @@ namespace Banker.Extensions.CustomExceptions
         internal TransactionNotFoundException(string message, Exception innerException)
             : base(message, innerException) { }
     }
+
+    public class FileSaveException : Exception
+    {
+        internal FileSaveException() { }
+        internal FileSaveException(string message) : base(message) { }
+        internal FileSaveException(string message, Exception innerException)
+            : base(message, innerException) { }
+    }
 }

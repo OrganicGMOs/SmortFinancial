@@ -14,7 +14,8 @@ Console.WriteLine("Banker initialized");
 //.GetValueCollection<Transaction>();
 var result = await banker.ParseTransactionCSV(new CSVDefinition
 {
-    FilePath = Environment.SpecialFolder.Desktop + "\\transactions.CSV",
+    //"C:\Users\Jeff\Desktop\testdata.csv"
+    FilePath = @"C:\Users\Jeff\Desktop\transactions.csv",
     Name = "Navy Federal",
     HeaderPresent = true,
     ColumnCount = 5,
@@ -26,9 +27,11 @@ var result = await banker.ParseTransactionCSV(new CSVDefinition
     DescriptionColumn = 3,
     DescriptionerDelimiter = " - "
 });
-var rr = result.GetValueCollection<Transaction>();
+var rr = result.GetValue<ITransactionParseResult>();
+Console.WriteLine(rr.Loaded.Count());
+await banker.SaveTransactions(rr.Loaded);
 //works but is count vs file is off by 1
-foreach(var r in rr)
+foreach(var r in rr.Loaded)
 {
     Console.WriteLine(String.Format("transaction results: value {0}, isDebit {1}, Date {2}, Description {3}",
         r.Value,r.IsDebit,r.Date,r.Description));

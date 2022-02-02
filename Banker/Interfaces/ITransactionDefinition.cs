@@ -13,7 +13,7 @@ namespace Banker.Interfaces
     /// </summary>
     public interface ITransactionDefinition
     {
-        public Guid Id { get; set; }
+        public Guid AssignedId { get; set; }
         public Guid MappedCategory { get; set; }
         public string Key { get; set; }
         public bool ReductionTarget { get; set; }

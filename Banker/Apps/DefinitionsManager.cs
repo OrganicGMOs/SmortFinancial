@@ -80,9 +80,10 @@ namespace Banker.Apps
                     return new TransactionCategory
                     {
                         CategoryId = category.AssignedId,
+                        //todo: auto subtype tagging?
                         Subtype = category.SubTypes[0],
                         CategoryType = category.CategoryType,
-                        Color = Convert.ToInt32(category.ColorHex, 16),
+                        Color = Convert.ToInt32((string)category.ColorHex, 16),
                         ReductionTarget = category.ReductionTarget
                     };
                 }
@@ -113,12 +114,12 @@ namespace Banker.Apps
         }
         internal Task ModifyTransaction(ITransactionDefinition transaction)
         {
-            var current = GetTransactionById(transaction.Id);
+            var current = GetTransactionById(transaction.AssignedId);
             if (current != null)
             {
                 current.MappedCategory = transaction.MappedCategory;
                 current.Key = transaction.Key;
-                current.AssignedId = transaction.Id;
+                current.AssignedId = transaction.AssignedId;
                 current.ReductionTarget = transaction.ReductionTarget;
                 if (_defaultTransactionDefinitions.Definitions.Contains(current))
                     _defaultTransactionDefinitions.NeedsWrite = true;
@@ -132,7 +133,7 @@ namespace Banker.Apps
         }
         internal Task DeleteTransaction(ITransactionDefinition transaction)
         {
-            var toDelete = GetTransactionById(transaction.Id);
+            var toDelete = GetTransactionById(transaction.AssignedId);
             if (toDelete == null)
                 throw new TransactionNotFoundException();
             else
@@ -333,7 +334,6 @@ namespace Banker.Apps
                         }
                     }
                 };
-
             _defaultTransactionDefinitions = transactions;
             if(rewrite)
             {
