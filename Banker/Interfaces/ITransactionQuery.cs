@@ -22,6 +22,7 @@ namespace Banker.Interfaces
         public float? Max { get; set; }
         public bool? CreditOnly { get; set; }
         public bool? DebitOnly { get; set; }
+        public string? Name { get; set; }
         public List<Guid>? TransactionIds { get; set; }
         public List<Guid>? CategoryIds { get; set; }
         public List<string>? SubCategory { get; set; }

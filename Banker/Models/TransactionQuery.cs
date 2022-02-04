@@ -19,5 +19,6 @@ namespace Banker.Models
         public List<Guid>? CategoryIds { get; set; }
         public List<string>? SubCategory { get; set; }
         public List<string>? Tags { get; set; }
+        public string? Name { get; set; }
     }
 }

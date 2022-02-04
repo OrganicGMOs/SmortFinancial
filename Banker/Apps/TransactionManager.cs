@@ -1,4 +1,5 @@
-﻿using Banker.Extensions.CustomExceptions;
+﻿using Banker.Extensions;
+using Banker.Extensions.CustomExceptions;
 using Banker.Interfaces;
 using Banker.Models;
 using Newtonsoft.Json;
@@ -244,7 +245,10 @@ namespace Banker.Apps
             else if(string.IsNullOrEmpty(json))
                 history = StartHistory(path);       //file exist but couldnt read for somereason
             else
-                history = JsonConvert.DeserializeObject<TransactionHistory>(json);
+            {
+                history = JsonConvert.DeserializeObject<TransactionHistory>
+                    (json,new TransactionHistoryConverter());
+            }
             if(history == null)
                 return StartHistory(path); //just return and dont overwrite. makes complier happy
             else
@@ -400,6 +404,7 @@ namespace Banker.Apps
                         if(CheckMembership<Guid>(r.TransactionType.AssignedId,query.TransactionIds))
                             if(CheckMembership<Guid>(r.Category.CategoryId,query.CategoryIds))
                                 if(CheckMembership<string>(r.Category.Subtype,query.SubCategory))
+                                    if(CheckName(r,query.Name))
                                     if(TagCheck(r,query.Tags))
                                         matches.Add(r);
             }
@@ -439,6 +444,19 @@ namespace Banker.Apps
                 return true;
             else
                 return collection.Contains(value);
+        }
+        private bool CheckName(ITransaction record, string? search)
+        {
+            if (search == null)
+                return true;
+            else
+            {
+                if (string.Equals(record.TransactionType.Key, search, StringComparison.OrdinalIgnoreCase))
+                    return true;
+                if (string.Equals(record.Description, search, StringComparison.OrdinalIgnoreCase))
+                    return true;
+            }
+            return false;
         }
         private bool TagCheck(ITransaction record, IEnumerable<string>? tags)
         {
