@@ -1,11 +1,11 @@
 ﻿using Banker.Extensions.CustomExceptions;
 using Banker.Interfaces;
 using Banker.Models;
-using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Text.Json;
 using System.Threading.Tasks;
 
 namespace Banker.Apps
@@ -35,7 +35,6 @@ namespace Banker.Apps
                 AssignedId = Guid.NewGuid(),
                 CategoryType = category.Name,
                 SubTypes = category.SubCategories,
-                ColorHex = category.Color,
                 ReductionTarget = category.ReductionTarget,
             });
             return Task.CompletedTask;
@@ -50,7 +49,6 @@ namespace Banker.Apps
                 item.SubTypes = category.SubCategories;
                 item.ReductionTarget = category.ReductionTarget;
                 item.CategoryType = category.Name;
-                item.ColorHex = category.Color;
                 item.ReductionTarget = category.ReductionTarget;
             }
             return Task.CompletedTask;
@@ -83,7 +81,6 @@ namespace Banker.Apps
                         //todo: auto subtype tagging?
                         Subtype = category.SubTypes[0],
                         CategoryType = category.CategoryType,
-                        Color = Convert.ToInt32((string)category.ColorHex, 16),
                         ReductionTarget = category.ReductionTarget
                     };
                 }
@@ -232,7 +229,7 @@ namespace Banker.Apps
         }
         private async Task SaveDefintion<T>(T def, string path)
         {
-            var json = JsonConvert.SerializeObject(def);
+            var json = JsonSerializer.Serialize(def);
             await Extensions.Functions.WriteFile(json, path);
         }
         #endregion
@@ -296,7 +293,6 @@ namespace Banker.Apps
                             AssignedId = Guid.Empty,
                             CategoryType = "Unknown",
                             SubTypes = new string[0],
-                            ColorHex = "0xFFFFFF",
                             ReductionTarget = false,
                         }
                     }
@@ -306,8 +302,8 @@ namespace Banker.Apps
             _defaultCategoryDefinitions = categories;
             if (rewrite)
             {
-                var json = JsonConvert
-                    .SerializeObject(_defaultCategoryDefinitions, Formatting.Indented);
+                var json = JsonSerializer
+                    .Serialize(_defaultCategoryDefinitions);
                 await Extensions.Functions.WriteFile(file, json);
             }
         }
@@ -337,8 +333,8 @@ namespace Banker.Apps
             _defaultTransactionDefinitions = transactions;
             if(rewrite)
             {
-                var json = JsonConvert
-                    .SerializeObject(_defaultTransactionDefinitions, Formatting.Indented);
+                var json = JsonSerializer
+                    .Serialize(_defaultTransactionDefinitions);
                 await Extensions.Functions.WriteFile(file, json);
             }    
         }
@@ -384,7 +380,7 @@ namespace Banker.Apps
                     return default(T);
                 if(string.IsNullOrEmpty(json))
                     return default(T?);
-                var obj = JsonConvert.DeserializeObject<T>(json);
+                var obj = JsonSerializer.Deserialize<T>(json);
                 return obj;
             }
             catch(Exception ex)
@@ -403,7 +399,7 @@ namespace Banker.Apps
                 if(response.IsSuccessStatusCode)
                 {
                     var json = await response.Content.ReadAsStringAsync();
-                    var obj = JsonConvert.DeserializeObject<T>(json);
+                    var obj = JsonSerializer.Deserialize<T>(json);
                     if (obj == null)
                         return default(T);
                     else

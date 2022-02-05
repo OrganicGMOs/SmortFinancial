@@ -11,7 +11,6 @@ namespace Banker.Interfaces
         public Guid CategoryId { get; set; }
         public string Name { get; set; }
         public string[] SubCategories { get; set; }
-        public string Color { get; set; }
         public bool ReductionTarget { get; set; }
     }
 }

@@ -12,7 +12,6 @@ namespace Banker.Models
         public Guid CategoryId { get; set; }
         public string CategoryType { get; set; }
         public string Subtype { get; set; }
-        public int Color { get; set; }
         public bool ReductionTarget { get; set; }
     }
 }

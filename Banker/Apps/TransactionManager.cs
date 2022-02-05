@@ -2,11 +2,11 @@
 using Banker.Extensions.CustomExceptions;
 using Banker.Interfaces;
 using Banker.Models;
-using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Text.Json;
 using System.Threading.Tasks;
 
 namespace Banker.Apps
@@ -233,26 +233,35 @@ namespace Banker.Apps
             {
                 return a.Date.CompareTo(b.Date);
             });
-            var json = JsonConvert.SerializeObject(history, Formatting.Indented);
+            var json = JsonSerializer.Serialize(history, new JsonSerializerOptions
+            {
+                WriteIndented = true,
+            });
             await Extensions.Functions.WriteFile(history.FilePath, json);
         }
         private async Task<TransactionHistory> GetOrCreateHistory(string path)
         {
             var json = await Extensions.Functions.ReadFile(path);
-            TransactionHistory? history;
+            TransactionHistory? history = null;
             if (json == null)
                 history = StartHistory(path, true); //file dont exist
             else if(string.IsNullOrEmpty(json))
                 history = StartHistory(path);       //file exist but couldnt read for somereason
             else
             {
-                history = JsonConvert.DeserializeObject<TransactionHistory>
-                    (json,new TransactionHistoryConverter());
+                try
+                {
+                    history = JsonSerializer.Deserialize<TransactionHistory>(json);
+                    if (history == null)
+                        return StartHistory(path); //just return and dont overwrite. makes complier happy
+                }
+                catch(Exception ex)
+                {
+                    Console.WriteLine(ex.Message);
+                }
+                
             }
-            if(history == null)
-                return StartHistory(path); //just return and dont overwrite. makes complier happy
-            else
-                return history;            //really just to stop com
+            return history;
         }
         private TransactionHistory StartHistory(string path,bool needsCreation = false)
         {
@@ -399,14 +408,15 @@ namespace Banker.Apps
             var records = LoadedTransactions.Transactions.ToArray();
             foreach (var r in records)
             {
+                //matches all options or not at all. non specified options = true
                 if(DateCheck(r,query.NotBefore,query.NotAfter))
                     if(PriceCheck(r,query.Min,query.Max))
                         if(CheckMembership<Guid>(r.TransactionType.AssignedId,query.TransactionIds))
                             if(CheckMembership<Guid>(r.Category.CategoryId,query.CategoryIds))
                                 if(CheckMembership<string>(r.Category.Subtype,query.SubCategory))
                                     if(CheckName(r,query.Name))
-                                    if(TagCheck(r,query.Tags))
-                                        matches.Add(r);
+                                        if(TagCheck(r,query.Tags))
+                                            matches.Add(r);
             }
             return matches;
         }

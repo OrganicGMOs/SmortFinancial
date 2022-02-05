@@ -2,7 +2,6 @@
 using Banker.Extensions.CustomExceptions;
 using Banker.Interfaces;
 using Banker.Models;
-using Newtonsoft.Json;
 using System;
 using System.Collections;
 using System.Collections.Generic;

@@ -1,8 +1,9 @@
-﻿using Newtonsoft.Json;
+﻿
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Text.Json;
 using System.Threading.Tasks;
 
 namespace Banker.Extensions
@@ -61,7 +62,7 @@ namespace Banker.Extensions
             try
             {
                 if (json.Length > 0)
-                    return JsonConvert.DeserializeObject<T>(json);
+                    return JsonSerializer.Deserialize<T>(json);
                 else
                     return default(T);
             }

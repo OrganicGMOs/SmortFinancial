@@ -1,10 +1,10 @@
 ﻿using Banker.Extensions;
 using Banker.Interfaces;
-using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 
 namespace Banker.Models
@@ -26,6 +26,7 @@ namespace Banker.Models
         public bool NeedsWrite { get; set; }
         public DateTime Modified { get; set; }
         public DateTime OldestRecord { get; set; }
+        [JsonConverter(typeof(TransactionConverter))]
         public List<ITransaction> Transactions { get; set; }
     }
     public class CategoryDefinitions

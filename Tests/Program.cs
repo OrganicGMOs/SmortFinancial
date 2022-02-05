@@ -2,7 +2,7 @@
 using Banker;
 using Banker.Interfaces;
 using Banker.Models;
-using Newtonsoft.Json;
+
 using System;
 using System.Diagnostics;
 using System.Linq;
@@ -37,8 +37,9 @@ var items = await banker.QueryTransactions2(new TransactionQuery
     Name = "venmo"
 });
 var result = items.GetValueCollection<ITransaction>();
+var count = result.Count();
 var cost = result.Select(p => p.Value).Sum();
-Console.WriteLine(string.Format("with a count of {0} orders from uber eats, the cost was {1}"),
-    result.Count(), cost);
+var message = string.Format("with a count of {0} orders from uber eats, the cost was {1}", count, cost);
+Console.WriteLine(message);
 Console.ReadKey();
 
