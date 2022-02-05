@@ -14,11 +14,12 @@ namespace Banker.Models
     public class TransactionDefinitions
     {
         public bool NeedsWrite { get; set; }
-        public List<TransactionDefinition> Definitions { get; set; }
+        [JsonConverter(typeof(TransactionDefinitionsConverter))]
+        public List<ITransactionDefinition> Definitions { get; set; }
     }
     public class TransactionCategories
     {
-        public TransactionCategory[] Categories { get; set; }
+        public ITransactionCategory[] Categories { get; set; }
     }
     public class TransactionHistory
     {
@@ -26,13 +27,14 @@ namespace Banker.Models
         public bool NeedsWrite { get; set; }
         public DateTime Modified { get; set; }
         public DateTime OldestRecord { get; set; }
-        [JsonConverter(typeof(TransactionConverter))]
+        [JsonConverter(typeof(TransactionsConverter))]
         public List<ITransaction> Transactions { get; set; }
     }
     public class CategoryDefinitions
     {
         public bool NeedsWrite { get; set; }
-        public List<CategoryDefinition> Definitions { get; set; }
+        [JsonConverter(typeof(CategoryDefinitionConverter))]
+        public List<ICategoryDefinition> Definitions { get; set; }
     }
 }
 

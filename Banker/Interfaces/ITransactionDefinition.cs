@@ -17,6 +17,6 @@ namespace Banker.Interfaces
         public Guid MappedCategory { get; set; }
         public string Key { get; set; }
         public bool ReductionTarget { get; set; }
-        
+        public List<string> DefaultTags { get; set; }
     }
 }

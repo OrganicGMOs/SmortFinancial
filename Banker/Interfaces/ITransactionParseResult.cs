@@ -10,11 +10,11 @@ namespace Banker.Interfaces
     public interface ITransactionParseResult
     {
         //found in the file
-        IEnumerable<Transaction> Loaded { get; set; }
+        IEnumerable<ITransaction> Loaded { get; set; }
         //found in loaded transaction collection
-        IEnumerable<Transaction> Duplicate { get; set; }
+        IEnumerable<ITransaction> Duplicate { get; set; }
         //date is older than 365 days away from today (archive item)
-        IEnumerable<Transaction> ArchiveItem { get; set; }
+        IEnumerable<ITransaction> ArchiveItem { get; set; }
         IEnumerable<string> FailedToParse { get; set; }
     }
 }

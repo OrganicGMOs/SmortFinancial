@@ -69,6 +69,10 @@ namespace Banker.Extensions
                 return default(T);
             }
         }
+        public static string ParseJson<T>(T obj)
+        {
+            return JsonSerializer.Serialize<T>(obj,defaultWrite);
+        }
         public static string GetFileNameFromPath(string path)
         {
             var start = path.LastIndexOf('\\') +1;

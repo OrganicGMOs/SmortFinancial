@@ -51,9 +51,9 @@ namespace Banker.Apps
         }
         internal ITransactionParseResult ParseCSVString(ICSVDefinition definition,string value)
         {
-            var transactions = new List<Transaction>();
-            var duplicates = new List<Transaction>();
-            var archive = new List<Transaction>();
+            var transactions = new List<ITransaction>();
+            var duplicates = new List<ITransaction>();
+            var archive = new List<ITransaction>();
             var failed = new List<string>();
             var lines = value.Split(definition.LineDelimiter).ToList();
             //is the last line item blank?
@@ -65,7 +65,7 @@ namespace Banker.Apps
                     break;
                 else
                 {
-                    Transaction? transaction = null;
+                    ITransaction? transaction = null;
                     try
                     {
                         var columns = line.Split(definition.ColumnDelimiter);
@@ -94,7 +94,7 @@ namespace Banker.Apps
                 Loaded = transactions
             };
         }
-        internal Transaction ParseCSVLine(string[] data, ICSVDefinition defintion)
+        internal ITransaction ParseCSVLine(string[] data, ICSVDefinition defintion)
         {
             bool outgoing;
             float value;
@@ -251,7 +251,7 @@ namespace Banker.Apps
             {
                 try
                 {
-                    history = JsonSerializer.Deserialize<TransactionHistory>(json);
+                    history = Extensions.Functions.ParseJson<TransactionHistory>(json);
                     if (history == null)
                         return StartHistory(path); //just return and dont overwrite. makes complier happy
                 }
@@ -291,7 +291,7 @@ namespace Banker.Apps
             else
                 return false;
         }
-        private bool CheckForArchiveItem(Transaction transaction, DateTime refrencePoint)
+        private bool CheckForArchiveItem(ITransaction transaction, DateTime refrencePoint)
         {
             if (refrencePoint.Subtract(transaction.Date).TotalDays > 365)
                 return true;

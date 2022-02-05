@@ -1,4 +1,5 @@
-﻿using Banker.Extensions.CustomExceptions;
+﻿using Banker.Extensions;
+using Banker.Extensions.CustomExceptions;
 using Banker.Interfaces;
 using Banker.Models;
 using System;
@@ -13,12 +14,12 @@ namespace Banker.Apps
     internal class DefinitionsManager
     {
         private string _definitions;
-        private List<TransactionDefinition> _transactionDefs;
-        private List<CategoryDefinition> _categoryDefs;
-        private CategoryDefinitions _defaultCategoryDefinitions;
-        private CategoryDefinitions _userCategoryDefinitions;
-        private TransactionDefinitions _defaultTransactionDefinitions;
-        private TransactionDefinitions _userTransactionDefinitions;
+        private List<ITransactionDefinition> _transactionDefs;           //all transaction definitions
+        private List<ICategoryDefinition> _categoryDefs;                 //all category definitions
+        private CategoryDefinitions _defaultCategoryDefinitions;        //serialization object
+        private CategoryDefinitions _userCategoryDefinitions;           //serialization object
+        private TransactionDefinitions _defaultTransactionDefinitions; //serialization object
+        private TransactionDefinitions _userTransactionDefinitions;    //serialzation object
         private const string CATEGORYURL = "https://raw.githubusercontent.com/OrganicGMOs/SmortFinancial/main/Definitions/Categories.json";
         private const string TRANSACTIONURL = "https://raw.githubusercontent.com/OrganicGMOs/SmortFinancial/main/Definitions/Transactions.json";
 
@@ -63,7 +64,7 @@ namespace Banker.Apps
             return Task.CompletedTask;
         }
 
-        internal TransactionCategory GetSlimCategory(TransactionDefinition? transactionType)
+        internal TransactionCategory GetSlimCategory(ITransactionDefinition? transactionType)
         {
             if (transactionType == null)
                 return new TransactionCategory();
@@ -87,7 +88,7 @@ namespace Banker.Apps
             }
         }
 
-        internal Task<IEnumerable<CategoryDefinition>> GetCategoryDefinitions()
+        internal Task<IEnumerable<ICategoryDefinition>> GetCategoryDefinitions()
         {
             return Task.FromResult(_categoryDefs.AsEnumerable());
         }
@@ -137,7 +138,7 @@ namespace Banker.Apps
                 UpdateCollections(toDelete, false);
             return Task.CompletedTask;
         }
-        internal Task<IEnumerable<TransactionDefinition>> GetTransactionDefinitions()
+        internal Task<IEnumerable<ITransactionDefinition>> GetTransactionDefinitions()
         {
             //calls an async method, probably not great since it just returns a collection
             var ahh = _transactionDefs.AsEnumerable();
@@ -147,7 +148,7 @@ namespace Banker.Apps
         #region Helpers
         //add to the two collections. maybe we shouldnt split them? saving is easier though
         //marks serialize object as needing to re-write
-        private void UpdateCollections(TransactionDefinition def, bool add = true)
+        private void UpdateCollections(ITransactionDefinition def, bool add = true)
         {
             if (add)
             {
@@ -162,7 +163,7 @@ namespace Banker.Apps
 
             _userTransactionDefinitions.NeedsWrite = true;
         }
-        private void UpdateCollections(CategoryDefinition def, bool add = true)
+        private void UpdateCollections(ICategoryDefinition def, bool add = true)
         {
             if (add)
             {
@@ -176,23 +177,23 @@ namespace Banker.Apps
             }
             _userCategoryDefinitions.NeedsWrite = true;
         }
-        internal CategoryDefinition? GetCategory(string key)
+        internal ICategoryDefinition? GetCategory(string key)
         {
             var item = _categoryDefs.Where(p => p.Name == key)
                 .FirstOrDefault();
             return item;
         }
-        internal CategoryDefinition? GetCategoryById(Guid id)
+        internal ICategoryDefinition? GetCategoryById(Guid id)
         {
             return _categoryDefs.Where(p => p.CategoryId == id)
                 .FirstOrDefault();
         }
-        internal TransactionDefinition? GetTransaction(string key)
+        internal ITransactionDefinition? GetTransaction(string key)
         {
             return _transactionDefs.Where(p => p.Key == key)
                 .FirstOrDefault();
         }
-        internal TransactionDefinition? GetTransactionById(Guid id)
+        internal ITransactionDefinition? GetTransactionById(Guid id)
         {
             return _transactionDefs.Where(p => p.AssignedId == id)
                 .FirstOrDefault();
@@ -255,7 +256,7 @@ namespace Banker.Apps
             }
             catch (Exception ex)
             {
-                return new DocumentSaveModel(false, path);
+                return new DocumentSaveModel(false, path,ex.Message);
             }
             
         }
@@ -278,7 +279,33 @@ namespace Banker.Apps
                 var defaultDefs = LoadDefaultDefinitions();
                 var userDefs = LoadUserDefinitions();
                 await Task.WhenAll(defaultDefs, userDefs);
-                await LoadDefaultDefinitions();
+                //make sure no duplicates between user defined and default
+                foreach (var t in _defaultTransactionDefinitions.Definitions)
+                {
+                    var duplicates = _userTransactionDefinitions.Definitions
+                        .Where(p => p.AssignedId == t.AssignedId || p.Key == p.Key).ToList();
+                    if(duplicates.Count() > 0)
+                    {
+
+                        foreach (var dup in duplicates)
+                            _userTransactionDefinitions.Definitions.Remove(dup);
+                        _userTransactionDefinitions.NeedsWrite = true;
+                    }
+                }
+                foreach(var c in _defaultCategoryDefinitions.Definitions)
+                {
+                    Console.WriteLine(c.Name);
+                    var duplicates = _userCategoryDefinitions.Definitions
+                       .Where(p => p.CategoryId == c.CategoryId || p.Name == c.Name).ToList();
+                    if (duplicates.Count() > 0)
+                    {
+
+                        foreach (var dup in duplicates)
+                            _userCategoryDefinitions.Definitions.Remove(dup);
+                        _userCategoryDefinitions.NeedsWrite = true;
+                    }
+                }
+                //now combine
                 _transactionDefs = _defaultTransactionDefinitions.Definitions.ToList();
                 _transactionDefs.AddRange(_userTransactionDefinitions.Definitions);
                 _categoryDefs = _defaultCategoryDefinitions.Definitions.ToList();
@@ -287,6 +314,10 @@ namespace Banker.Apps
             }catch(System.UnauthorizedAccessException ex)
             {
                 Console.WriteLine("Failed to initialize definations manager. Access denied");
+            }
+            catch(Exception ex)
+            {
+                Console.WriteLine(ex.Message);
             }
         }
         private async Task LoadDefaultDefinitions()
@@ -313,7 +344,7 @@ namespace Banker.Apps
             {
                 categories = new CategoryDefinitions()
                 {
-                    Definitions = new List<CategoryDefinition>()
+                    Definitions = new List<ICategoryDefinition>()
                     {
                         new CategoryDefinition()
                         {
@@ -346,7 +377,7 @@ namespace Banker.Apps
             if (transactions == null)
                 transactions = new TransactionDefinitions()
                 {
-                    Definitions = new List<TransactionDefinition>
+                    Definitions = new List<ITransactionDefinition>
                     {
                         new TransactionDefinition()
                         {
@@ -382,7 +413,7 @@ namespace Banker.Apps
             if (categories == null)
                 _userCategoryDefinitions = new CategoryDefinitions
                 {
-                    Definitions = new List<CategoryDefinition>()
+                    Definitions = new List<ICategoryDefinition>()
                 };
             else
                 _userCategoryDefinitions = categories;
@@ -393,7 +424,7 @@ namespace Banker.Apps
             if (transactions == null)
                 _userTransactionDefinitions = new TransactionDefinitions
                 {
-                    Definitions = new List<TransactionDefinition>()
+                    Definitions = new List<ITransactionDefinition>()
                 };
             else
                 _userTransactionDefinitions = transactions;
@@ -407,7 +438,7 @@ namespace Banker.Apps
                     return default(T);
                 if(string.IsNullOrEmpty(json))
                     return default(T?);
-                var obj = JsonSerializer.Deserialize<T>(json);
+                var obj = Extensions.Functions.ParseJson<T>(json);
                 return obj;
             }
             catch(Exception ex)
