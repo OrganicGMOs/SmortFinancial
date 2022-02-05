@@ -32,9 +32,9 @@ namespace Banker.Apps
                 throw new InvalidDataException("Category already exists");
             UpdateCollections(new CategoryDefinition
             {
-                AssignedId = Guid.NewGuid(),
-                CategoryType = category.Name,
-                SubTypes = category.SubCategories,
+                CategoryId = Guid.NewGuid(),
+                Name = category.Name,
+                SubCategories = category.SubCategories,
                 ReductionTarget = category.ReductionTarget,
             });
             return Task.CompletedTask;
@@ -46,9 +46,9 @@ namespace Banker.Apps
                 throw new CategoryNotFoundException();
             else
             {
-                item.SubTypes = category.SubCategories;
+                item.SubCategories = category.SubCategories;
                 item.ReductionTarget = category.ReductionTarget;
-                item.CategoryType = category.Name;
+                item.Name = category.Name;
                 item.ReductionTarget = category.ReductionTarget;
             }
             return Task.CompletedTask;
@@ -70,17 +70,17 @@ namespace Banker.Apps
             else
             {
                 var category = _categoryDefs
-                    .Where(p => p.AssignedId == transactionType.AssignedId).FirstOrDefault();
+                    .Where(p => p.CategoryId == transactionType.AssignedId).FirstOrDefault();
                 if (category == null)
                     return new TransactionCategory();
                 else
                 {
                     return new TransactionCategory
                     {
-                        CategoryId = category.AssignedId,
+                        CategoryId = category.CategoryId,
                         //todo: auto subtype tagging?
-                        Subtype = category.SubTypes[0],
-                        CategoryType = category.CategoryType,
+                        Subtype = category.SubCategories[0],
+                        CategoryType = category.Name,
                         ReductionTarget = category.ReductionTarget
                     };
                 }
@@ -178,13 +178,13 @@ namespace Banker.Apps
         }
         internal CategoryDefinition? GetCategory(string key)
         {
-            var item = _categoryDefs.Where(p => p.CategoryType == key)
+            var item = _categoryDefs.Where(p => p.Name == key)
                 .FirstOrDefault();
             return item;
         }
         internal CategoryDefinition? GetCategoryById(Guid id)
         {
-            return _categoryDefs.Where(p => p.AssignedId == id)
+            return _categoryDefs.Where(p => p.CategoryId == id)
                 .FirstOrDefault();
         }
         internal TransactionDefinition? GetTransaction(string key)
@@ -204,9 +204,9 @@ namespace Banker.Apps
         /// to save them.
         /// </summary>
         /// <returns></returns>
-        internal async Task SaveDefinitions()
+        internal async Task<IEnumerable<IDocumentSaveResult>> SaveDefinitions()
         {
-            var tasks = new List<Task>();
+            var tasks = new List<Task<IDocumentSaveResult>>();
             if (_defaultCategoryDefinitions.NeedsWrite)
                 tasks.Add(SaveDefintion<CategoryDefinitions>(
                     _defaultCategoryDefinitions,
@@ -225,12 +225,21 @@ namespace Banker.Apps
                     _userTransactionDefinitions,
                     _definitions + "\\CustomTransactionDefinitions.json"
                     ));
-            await Task.WhenAll(tasks);
+            return await Task.WhenAll(tasks);
         }
-        private async Task SaveDefintion<T>(T def, string path)
+        private async Task<IDocumentSaveResult> SaveDefintion<T>(T def, string path)
         {
-            var json = JsonSerializer.Serialize(def);
-            await Extensions.Functions.WriteFile(json, path);
+            try
+            {
+                var json = JsonSerializer.Serialize(def, Extensions.Functions.defaultWrite);
+                await Extensions.Functions.WriteFile(path, json);
+                return new DocumentSaveModel(true, path);
+            }
+            catch (Exception ex)
+            {
+                return new DocumentSaveModel(false, path);
+            }
+            
         }
         #endregion
 
@@ -290,9 +299,9 @@ namespace Banker.Apps
                     {
                         new CategoryDefinition()
                         {
-                            AssignedId = Guid.Empty,
-                            CategoryType = "Unknown",
-                            SubTypes = new string[0],
+                            CategoryId = Guid.Empty,
+                            Name = "Unknown",
+                            SubCategories = new string[0],
                             ReductionTarget = false,
                         }
                     }

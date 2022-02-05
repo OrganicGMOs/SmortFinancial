@@ -10,17 +10,14 @@ namespace Banker.Extensions
 {
     internal static class Functions
     {
+        //calling functions catch IO errors so they can either fix or return document save model
+        public static JsonSerializerOptions defaultWrite = new JsonSerializerOptions
+        {
+            WriteIndented = true,
+        };
         public static async Task WriteFile(string path, string content)
         {
-            try
-            {
-                await File.WriteAllTextAsync(path, content);
-            }
-            catch (Exception ex)
-            {
-                //todo: exception handling
-                Console.WriteLine(ex.Message);
-            }
+            await File.WriteAllTextAsync(path, content);
         }
         /// <summary>
         /// Attempts to asyn read a file at a given path.
@@ -71,6 +68,11 @@ namespace Banker.Extensions
                 //todo: exception and logging
                 return default(T);
             }
+        }
+        public static string GetFileNameFromPath(string path)
+        {
+            var start = path.LastIndexOf('\\') +1;
+            return path.Substring(start, path.Length - start);
         }
     }
 }

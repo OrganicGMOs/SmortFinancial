@@ -44,6 +44,18 @@ namespace Banker
             await Task.Yield();
             return RunAction(DefinitionsManager.GetCategoryDefinitions);
         }
+        /// <summary>
+        /// Saves all documents with pending changes.
+        /// </summary>
+        /// <returns>IBankerResult collection <br /> 
+        /// BankerResult => ValueCollection of IDocumentSaveResult
+        /// </returns>
+        public async Task<IEnumerable<IBankerResult>> SaveChanges()
+        {
+            var definitions = await RunActionAsync<IEnumerable<IDocumentSaveResult>>(DefinitionsManager.SaveDefinitions)
+                .ConfigureAwait(false);
+            return new List<IBankerResult> { definitions };
+        }
         #endregion
         #region TransactionDefinitions
         public async Task<IBankerResult> CreateTransactionDefinition(ITransactionDefinition transaction)
@@ -103,6 +115,10 @@ namespace Banker
             var result = RunAction(TransactionManager.QueryTransactions, query);
             return result;
 
+        }
+        public async Task<IBankerResult> ModifyTransaction(ITransaction transcation)
+        {
+            throw new NotImplementedException();
         }
         #endregion
 

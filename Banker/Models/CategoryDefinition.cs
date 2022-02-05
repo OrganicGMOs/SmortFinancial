@@ -9,12 +9,9 @@ namespace Banker.Models
 {
     public class CategoryDefinition : ICategoryDefinition
     {
-        public Guid AssignedId { get; set; }
-        public string CategoryType { get; set; }
-        public string[] SubTypes { get; set; }
-        public bool ReductionTarget { get; set; }
         public Guid CategoryId { get; set; }
         public string Name { get; set; }
         public string[] SubCategories { get; set; }
+        public bool ReductionTarget { get; set; }
     }
 }

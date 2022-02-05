@@ -32,14 +32,32 @@ Console.WriteLine("Banker initialized");
 //await banker.SaveTransactions(rr.Loaded);
 //works but is count vs file is off by 1
 
-var items = await banker.QueryTransactions2(new TransactionQuery
+//empty should return all loaded transactions
+var items = (await banker.QueryTransactions2(new TransactionQuery
 {
-    Name = "venmo"
+    Name = "unknown"
+})).GetValueCollection<ITransaction>();
+//create a category
+var cat = await banker.CreateCategoryDefinition(new CategoryDefinition
+{
+    Name = "Test",
+    SubCategories = new string[] { "ABC", "123", "Hi" },
+    CategoryId = Guid.NewGuid(),
+    ReductionTarget = false
 });
-var result = items.GetValueCollection<ITransaction>();
-var count = result.Count();
-var cost = result.Select(p => p.Value).Sum();
-var message = string.Format("with a count of {0} orders from uber eats, the cost was {1}", count, cost);
-Console.WriteLine(message);
+var searchCat = (await banker.GetCategoryDefinition("Test")).GetValue<ICategoryDefinition>();
+var saves = await banker.SaveChanges();
+foreach(var save in saves)
+{
+    var result = save.GetValueCollection<IDocumentSaveResult>();
+    foreach(var item in result)
+    {
+
+        Console.WriteLine(String.Format("Save result: {0} was saved = {1}, error? {2} ",
+       item.FileName, item.Success, item.ErrorMessage));
+        Console.WriteLine(item.FilePath);
+    }
+   
+}
 Console.ReadKey();
 
