@@ -208,24 +208,42 @@ namespace Banker.Apps
         {
             var tasks = new List<Task<IDocumentSaveResult>>();
             if (_defaultCategoryDefinitions.NeedsWrite)
+            {
+                _defaultCategoryDefinitions.NeedsWrite = false;     //set to false so we dont write true
                 tasks.Add(SaveDefintion<CategoryDefinitions>(
                     _defaultCategoryDefinitions,
                     _definitions + "\\DefaultCategoryDefinitions.json"));
+            }
             if (_defaultTransactionDefinitions.NeedsWrite)
+            {
+                _defaultTransactionDefinitions.NeedsWrite = false;
                 tasks.Add(SaveDefintion<TransactionDefinitions>(
                     _defaultTransactionDefinitions,
                     _definitions + "\\DefaultTransactionDefinitions.json"));
+            }
             if (_userCategoryDefinitions.NeedsWrite)
+            {
+                _userCategoryDefinitions.NeedsWrite = false;
                 tasks.Add(SaveDefintion<CategoryDefinitions>(
                     _userCategoryDefinitions,
                     _definitions + "\\CustomCategoryDefinitions.json"
                     ));
+            }
             if (_userTransactionDefinitions.NeedsWrite)
+            {
+                _userTransactionDefinitions.NeedsWrite = false;
                 tasks.Add(SaveDefintion<TransactionDefinitions>(
                     _userTransactionDefinitions,
                     _definitions + "\\CustomTransactionDefinitions.json"
                     ));
-            return await Task.WhenAll(tasks);
+            }
+            if (tasks.Count > 0)
+                return await Task.WhenAll(tasks);
+            else
+                return new List<IDocumentSaveResult>()
+                {
+                    new DocumentSaveModel(false,"","No definition files required changes")
+                };
         }
         private async Task<IDocumentSaveResult> SaveDefintion<T>(T def, string path)
         {
