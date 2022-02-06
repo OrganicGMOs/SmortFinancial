@@ -90,11 +90,6 @@ namespace Banker
             await Task.Yield();
             return RunAction(TransactionManager.GetTransaction, transaction);
         }
-        public async Task<IBankerResult> SaveTransactions(IEnumerable<ITransaction> transactions)
-        {
-            var result = await RunActionAsync(TransactionManager.SaveTransactions);
-            return result;
-        }
         public async Task<IBankerResult> QueryTransactions(ITransactionQuery query)
         {
             await Task.Yield();

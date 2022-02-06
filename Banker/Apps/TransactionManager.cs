@@ -77,6 +77,7 @@ namespace Banker.Apps
         {
             NewTransactions.AddRange(transactions);
             OldestTransaction = NewTransactions.OrderBy(p => p.Date).Last().Date;
+            LoadedTransactions.Transactions.AddRange(transactions);
             return Task.CompletedTask;
         }
         internal Task DeleteTransaction(ITransaction transction)
@@ -100,6 +101,7 @@ namespace Banker.Apps
 
         #region FileMangement
         //up to library user to save changes or not
+            //todo: duplicate/sanity check on archive files/collections
         internal async Task<IEnumerable<IDocumentSaveResult>> SaveTransactions()
         {
             return await UpdateSavedTransactions(LoadedTransactions.Transactions);

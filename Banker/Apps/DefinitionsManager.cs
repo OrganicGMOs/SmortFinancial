@@ -80,7 +80,7 @@ namespace Banker.Apps
                     {
                         CategoryId = category.CategoryId,
                         //todo: auto subtype tagging?
-                        Subtype = category.SubCategories[0],
+                        Subtype = category.SubCategories == null ? String.Empty : category.SubCategories[0],
                         CategoryType = category.Name,
                         ReductionTarget = category.ReductionTarget
                     };
@@ -276,6 +276,7 @@ namespace Banker.Apps
         {
             try
             {
+                DirectoryCheck();
                 var defaultDefs = LoadDefaultDefinitions();
                 var userDefs = LoadUserDefinitions();
                 await Task.WhenAll(defaultDefs, userDefs);
@@ -294,7 +295,6 @@ namespace Banker.Apps
                 }
                 foreach(var c in _defaultCategoryDefinitions.Definitions)
                 {
-                    Console.WriteLine(c.Name);
                     var duplicates = _userCategoryDefinitions.Definitions
                        .Where(p => p.CategoryId == c.CategoryId || p.Name == c.Name).ToList();
                     if (duplicates.Count() > 0)
@@ -319,6 +319,11 @@ namespace Banker.Apps
             {
                 Console.WriteLine(ex.Message);
             }
+        }
+        private void DirectoryCheck()
+        {
+            if(!Directory.Exists(_definitions))
+                Directory.CreateDirectory(_definitions);
         }
         private async Task LoadDefaultDefinitions()
         {
@@ -356,12 +361,13 @@ namespace Banker.Apps
                     }
                 };
             }
+            else if (categories.Definitions == null)
+                categories.Definitions = new List<ICategoryDefinition>();
                 
             _defaultCategoryDefinitions = categories;
             if (rewrite)
             {
-                var json = JsonSerializer
-                    .Serialize(_defaultCategoryDefinitions);
+                var json = Functions.ParseJson(_defaultCategoryDefinitions);
                 await Extensions.Functions.WriteFile(file, json);
             }
         }
@@ -388,11 +394,12 @@ namespace Banker.Apps
                         }
                     }
                 };
+            else if(transactions.Definitions == null)
+                transactions.Definitions = new List<ITransactionDefinition>();
             _defaultTransactionDefinitions = transactions;
             if(rewrite)
             {
-                var json = JsonSerializer
-                    .Serialize(_defaultTransactionDefinitions);
+                var json = Functions.ParseJson(_defaultTransactionDefinitions);
                 await Extensions.Functions.WriteFile(file, json);
             }    
         }
