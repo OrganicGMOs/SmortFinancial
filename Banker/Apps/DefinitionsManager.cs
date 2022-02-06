@@ -140,8 +140,6 @@ namespace Banker.Apps
         }
         internal Task<IEnumerable<ITransactionDefinition>> GetTransactionDefinitions()
         {
-            //calls an async method, probably not great since it just returns a collection
-            var ahh = _transactionDefs.AsEnumerable();
             return Task.FromResult(_transactionDefs.AsEnumerable());
         }
         #endregion

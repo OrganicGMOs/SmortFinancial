@@ -19,11 +19,23 @@ namespace Banker
         #region api
         //no idea if this is a bad design or not...but less try catch for me
         #region CategoryDefinitions
+        /// <summary>
+        /// Accepts/Creates a categor definition
+        /// </summary>
+        /// <param name="category"></param>
+        /// <returns>IBankerResult value <br /> 
+        /// BankerResult => Value of Task
+        /// </returns>
         public async Task<IBankerResult> CreateCategoryDefinition(ICategoryDefinition category)
         {
             await Task.Yield(); //quick action, wait until awaited
             return RunAction<ICategoryDefinition,Task>(DefinitionsManager.CreateCategory,category);
         }
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="category"></param>
+        /// <returns></returns>
         public async Task<IBankerResult> DeleteCategory(ICategoryDefinition category)
         {
             await Task.Yield();
@@ -54,16 +66,37 @@ namespace Banker
         }
         #endregion
         #region TransactionDefinitions
+        /// <summary>
+        /// Creates/accepts a transaction defition
+        /// </summary>
+        /// <param name="transaction"></param>
+        /// <returns>IBankerResult value <br /> 
+        /// BankerResult => Value of Task
+        /// </returns>
         public async Task<IBankerResult> CreateTransactionDefinition(ITransactionDefinition transaction)
         {
             await Task.Yield();
             return RunAction(DefinitionsManager.CreateTransaction,transaction);
         }
+        /// <summary>
+        /// Removes a transaction definition from memory/file
+        /// </summary>
+        /// <param name="transaction"></param>
+        /// <returns>IBankerResult value <br /> 
+        /// BankerResult => Value of Task
+        /// </returns>
         public async Task<IBankerResult> DeleteTransactionDefinition(ITransactionDefinition transaction)
         {
             await Task.Yield();
             return RunAction(DefinitionsManager.DeleteTransaction,transaction);
         }
+        /// <summary>
+        /// Gets a transaction defintion based on name/key
+        /// </summary>
+        /// <param name="transactionKey"></param>
+        /// <returns>IBankerResult value <br /> 
+        /// BankerResult => Value of ITransactionDefinition
+        /// </returns>
         public async Task<IBankerResult> GetTransactionDefinition(string transactionKey)
         {
             await Task.Yield();
@@ -72,6 +105,9 @@ namespace Banker
         /// <summary>
         /// 
         /// </summary>
+        /// <returns>IBankerResult ValueCollection <br /> 
+        /// BankerResult => ValueCollection of ITransactionDefintion
+        /// </returns>
         /// <returns> IEnumerable TransactionDefinition </returns>
         public async Task<IBankerResult> GetTransactionDefinitions() 
         {
@@ -80,16 +116,37 @@ namespace Banker
         }
         #endregion
         #region Transactions
+        /// <summary>
+        /// Parses transactions based off string or file and CSV definition
+        /// </summary>
+        /// <param name="definition"></param>
+        /// <returns>IBankerResult value <br /> 
+        /// BankerResult => Value of ITransactionParseResults
+        /// </returns>
         public async Task<IBankerResult> ParseTransactionCSV(ICSVDefinition definition)
         {
             var result = await RunActionAsync(TransactionManager.ParseTransactionCSV, definition);
             return result;
         }
+        /// <summary>
+        /// Gets a transaction that matches inputted ITransaction
+        /// </summary>
+        /// <param name="transaction"></param>
+        /// <returns>IBankerResult value <br /> 
+        /// BankerResult => Value of ITransaction
+        /// </returns>
         public async Task<IBankerResult> GetTransaction(ITransaction transaction) 
         {
             await Task.Yield();
             return RunAction(TransactionManager.GetTransaction, transaction);
         }
+        /// <summary>
+        /// returns a set of ITransactions that matches query parameters
+        /// </summary>
+        /// <param name="query">Null query values result in true for all transactions</param>
+        /// <returns>IBankerResult Collection <br /> 
+        /// BankerResult => ValueCollection of ITransaction
+        /// </returns>
         public async Task<IBankerResult> QueryTransactions(ITransactionQuery query)
         {
             await Task.Yield();
@@ -97,6 +154,14 @@ namespace Banker
             return result;
 
         }
+        /// <summary>
+        /// adds ITransaction collection to loaded transactions collection. Once added,
+        /// will be written to file when SaveChanges is called
+        /// </summary>
+        /// <param name="transactions"></param>
+        /// <returns>IBankerResult value <br /> 
+        /// BankerResult => Value of Task
+        /// </returns>
         public async Task<IBankerResult> AddTransactions(IEnumerable<ITransaction> transactions)
         {
             await Task.Yield();
