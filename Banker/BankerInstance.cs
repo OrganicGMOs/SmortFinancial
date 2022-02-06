@@ -24,11 +24,6 @@ namespace Banker
             await Task.Yield(); //quick action, wait until awaited
             return RunAction<ICategoryDefinition,Task>(DefinitionsManager.CreateCategory,category);
         }
-        public async Task<IBankerResult> ModifyCategory(ICategoryDefinition category)
-        {
-            await Task.Yield();
-            return RunAction(DefinitionsManager.ModifyCategory, category);
-        }
         public async Task<IBankerResult> DeleteCategory(ICategoryDefinition category)
         {
             await Task.Yield();
@@ -52,9 +47,10 @@ namespace Banker
         /// </returns>
         public async Task<IEnumerable<IBankerResult>> SaveChanges()
         {
-            var definitions = await RunActionAsync<IEnumerable<IDocumentSaveResult>>(DefinitionsManager.SaveDefinitions)
+            var definitions = await RunActionAsync(DefinitionsManager.SaveDefinitions)
                 .ConfigureAwait(false);
-            return new List<IBankerResult> { definitions };
+            var transactions = await RunActionAsync(TransactionManager.SaveTransactions);
+            return new List<IBankerResult> { definitions,transactions };
         }
         #endregion
         #region TransactionDefinitions
@@ -62,11 +58,6 @@ namespace Banker
         {
             await Task.Yield();
             return RunAction(DefinitionsManager.CreateTransaction,transaction);
-        }
-        public async Task<IBankerResult> ModifyTransactionDefinition(ITransactionDefinition transaction)
-        {
-            await Task.Yield();
-            return RunAction(DefinitionsManager.ModifyTransaction, transaction);
         }
         public async Task<IBankerResult> DeleteTransactionDefinition(ITransactionDefinition transaction)
         {
@@ -99,26 +90,24 @@ namespace Banker
             await Task.Yield();
             return RunAction(TransactionManager.GetTransaction, transaction);
         }
-        public async Task<IBankerResult> QueryTransactions(ITransactionQuery query) 
-        {
-            var result = await RunActionAsync(TransactionManager.ProcessQuery, query);
-            return result;
-        }
         public async Task<IBankerResult> SaveTransactions(IEnumerable<ITransaction> transactions)
         {
-            var result = await RunActionAsync(TransactionManager.SaveTransactions, transactions);
+            var result = await RunActionAsync(TransactionManager.SaveTransactions);
             return result;
         }
-        public async Task<IBankerResult> QueryTransactions2(ITransactionQuery query)
+        public async Task<IBankerResult> QueryTransactions(ITransactionQuery query)
         {
             await Task.Yield();
             var result = RunAction(TransactionManager.QueryTransactions, query);
             return result;
 
         }
-        public async Task<IBankerResult> ModifyTransaction(ITransaction transcation)
+        public async Task<IBankerResult> AddTransactions(IEnumerable<ITransaction> transactions)
         {
-            throw new NotImplementedException();
+            await Task.Yield();
+            var result = RunAction(TransactionManager.UpdateTransactionHistory, transactions);
+            return result;
+
         }
         #endregion
 
@@ -183,13 +172,11 @@ namespace Banker
             }
             catch (Exception ex)
             {
-                Console.WriteLine(ex.Message);
                 return ProduceErrorResult(ex);
             }
         }
         private IBankerResult ProduceResult<T>(T value)
         {
-            Console.WriteLine(typeof(T).Name);
             if (value is T) //will always be true?
             {
                 //is it a collection? 
@@ -223,6 +210,8 @@ namespace Banker
             {
                 case CategoryNotFoundException:
                     return GenerateResult(false, "Failed to locate record");
+                case InvalidDataException:
+                    return GenerateResult(false, "Invalid data was encountered");
                 default:
                     return GenerateResult(false, "An error occoured, please try again later");
             }

@@ -250,8 +250,8 @@ namespace Banker.Apps
         {
             try
             {
-                var json = JsonSerializer.Serialize(def, Extensions.Functions.defaultWrite);
-                await Extensions.Functions.WriteFile(path, json);
+                var json = Functions.ParseJson<T>(def);
+                await Functions.WriteFile(path, json);
                 return new DocumentSaveModel(true, path);
             }
             catch (Exception ex)

@@ -28,4 +28,12 @@ namespace Banker.Extensions.CustomExceptions
         internal FileSaveException(string message, Exception innerException)
             : base(message, innerException) { }
     }
+    //ItemDoesNotExistException
+    public class ItemDoesNotExistException : Exception
+    {
+        internal ItemDoesNotExistException() { }
+        internal ItemDoesNotExistException(string message) : base(message) { }
+        internal ItemDoesNotExistException(string message, Exception innerException)
+            : base(message, innerException) { }
+    }
 }

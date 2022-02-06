@@ -37,8 +37,7 @@ namespace Banker.Extensions
         public override void Write(Utf8JsonWriter writer, List<ITransaction> value, JsonSerializerOptions options)
         {
             var transactions = value.Cast<Transaction>().ToList();
-            var text = Extensions.Functions.ParseJson(transactions);
-            writer.WriteStringValue(text);
+            JsonSerializer.Serialize(writer, transactions, options);
         }
     }
     public class TransactionDefinitionsConverter : JsonConverter<List<ITransactionDefinition>>
@@ -63,8 +62,7 @@ namespace Banker.Extensions
         public override void Write(Utf8JsonWriter writer, List<ITransactionDefinition> value, JsonSerializerOptions options)
         {
             var transctionDefs = value.Cast<TransactionDefinition>().ToList();
-            var text = Extensions.Functions.ParseJson(transctionDefs);
-            writer.WriteStringValue(text);
+            JsonSerializer.Serialize(writer, transctionDefs, options);
         }
     }
     public class TransactionDefinitionConverter : JsonConverter<ITransactionDefinition>
@@ -87,8 +85,7 @@ namespace Banker.Extensions
         public override void Write(Utf8JsonWriter writer, ITransactionDefinition value, JsonSerializerOptions options)
         {
             var transactionDef = (TransactionDefinition)value;
-            var text = Extensions.Functions.ParseJson(transactionDef);
-            writer.WriteStringValue(text);
+            JsonSerializer.Serialize(writer, transactionDef, options);
         }
     }
     public class TransactionCategoryConverter : JsonConverter<ITransactionCategory>
@@ -107,8 +104,7 @@ namespace Banker.Extensions
         public override void Write(Utf8JsonWriter writer, ITransactionCategory value, JsonSerializerOptions options)
         {
             var transactionCat = (TransactionCategory)value;
-            var text = Extensions.Functions.ParseJson(transactionCat);
-            writer.WriteStringValue(text);
+            JsonSerializer.Serialize(writer, transactionCat, options);
         }
     }
     public class CategoryDefinitionConverter : JsonConverter<List<ICategoryDefinition>>
@@ -132,9 +128,8 @@ namespace Banker.Extensions
 
         public override void Write(Utf8JsonWriter writer, List<ICategoryDefinition> value, JsonSerializerOptions options)
         {
-            var categoryDefs = value.Cast<CategoryDefinition>;
-            var text = Extensions.Functions.ParseJson(categoryDefs);
-            writer.WriteStringValue(text);
+            var categoryDefs = value.Cast<CategoryDefinition>().ToList();
+            JsonSerializer.Serialize(writer, categoryDefs,options);
         }
     }
 

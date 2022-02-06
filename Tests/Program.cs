@@ -33,19 +33,55 @@ Console.WriteLine("Banker initialized");
 //works but is count vs file is off by 1
 
 //empty should return all loaded transactions
-var items = (await banker.QueryTransactions2(new TransactionQuery
+var def = new CategoryDefinition
 {
-    Name = "unknown"
-})).GetValueCollection<ITransaction>();
-//create a category
-var cat = await banker.CreateCategoryDefinition(new CategoryDefinition
-{
-    Name = "Test",
-    SubCategories = new string[] { "ABC", "123", "Hi" },
+    Name = "Food",
+    SubCategories = new string[] { "Grocery", "Resturant", "Order out" },
     CategoryId = Guid.NewGuid(),
     ReductionTarget = false
-});
-var searchCat = (await banker.GetCategoryDefinition("Test")).GetValue<ICategoryDefinition>();
+};
+var cat = await banker.CreateCategoryDefinition(def);
+var trans = new TransactionDefinition
+{
+    AssignedId = Guid.NewGuid(),
+    DefaultTags = new List<string> { "food", "unnecessary" },
+    Key = "Uber Eats",
+    MappedCategory = def.CategoryId
+};
+if (cat.IsSuccess)
+{
+    var transactionDef = await banker.CreateTransactionDefinition(trans);
+    if(transactionDef.IsSuccess)
+    {
+        //get all the transactions
+        var transactions = (await banker.QueryTransactions(new TransactionQuery
+        {
+            Name = "Uber"
+        })).GetValueCollection<ITransaction>();
+        //wasnt doing deep copies like I thought, but its actually not necessary and
+        //probably a waste of memory
+        foreach (var transaction in transactions)
+        {
+            transaction.TransactionType = trans;
+            transaction.Category = new TransactionCategory
+            {
+                CategoryId = def.CategoryId,
+                CategoryType = def.Name,
+                //subtype doesnt need to match up but search might not pick it up
+                Subtype = def.SubCategories[2],
+                ReductionTarget = true
+            };
+            transaction.Tags = transaction.TransactionType.DefaultTags;
+        }
+
+    }
+}
+else
+{
+    Console.WriteLine("Failed to create category");
+}
+
+var searchCat = (await banker.GetCategoryDefinition("Food")).GetValue<ICategoryDefinition>();
 var saves = await banker.SaveChanges();
 foreach(var save in saves)
 {
